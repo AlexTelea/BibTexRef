@@ -1,0 +1,38 @@
+
+
+!Quick user guide
+
+!!How to add new papers?
+
+Open this page with [[{$FullName}?action=editbib | ?action=editbib]] postpended; give the site password if asked
+
+An editor shows the BibTeX file for this site; add your new BibTeX entry. When doing this:
+* use the standard BibTeX format
+* mandatory fields you must add: 
+** key (entry name): must be '''unique''' i.e. not used by other entries (search BibTeX file to check)
+** title: avoid using complex math-mode or similar code; we cannot always parse that
+** author: some author(s) must be added
+** entry type: a BibTeX record needs a type e.g. @@article@@, @@inproceedings@@, etc
+* optional fields:
+** '''pdf''': Adds icon to show the paper PDF (must be a public URL). Thumbnails are auto-extracted from this PDF (read below)
+** '''url''': Adds icon to navigate to a (public) URL. You can add any URL of interest here
+** '''code''': As above but with a code-pointing URL e.g. GitHub
+** '''keywords''': List of free-text keywords used by the engine for search by keyword
+** '''award''': Renders this text in red along an award-winning icon 
+
+Be very careful to
+** %red% not delete existing text in the BibTeX editor %% (yes, this happens easily!)
+** %red% not insert a wrongly formatted BibTeX entry %% (can mess up things in many suble ways)
+
+Save the form. If your newly added paper doesn't show up as desired, read next
+
+!!How to manage what you added?
+
+Open this page with [[{$FullName}?action=managebib | ?action=managebib]] postpended; give the site password if asked. Then:
+
+* don't see your edits reflected in the webpage? Use '''Delete caches'''; reload the page; takes a bit to recompute
+* want to edit a specific BibTeX entry? Search for it (Ctrl-F/Cmd-F), click its name, then '''Edit BibTeX record''' 
+* auto-extracted thumbnail images from the paper's PDF not quite right? Use '''Delete selected''', '''Upload thumbnail''' to delete them or add custom ones (JPG format only)
+* no '''pdf''' field since no public URL for your paper's PDF? Use '''Upload custom PDF''' to upload a local PDF copy  
+* PDF for your paper changed? Use '''Rebuild thumbnails from PDF''' to auto-extract thumbnails again
+

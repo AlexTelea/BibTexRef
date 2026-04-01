@@ -1,0 +1,304 @@
+<?php
+
+//TODO
+// -better logic for finding most relevant images; e.g. save them as they are from PdfToText; use their imgsizes here to determine relevant images (small==less relevant)
+
+
+include 'PdfToText.phpclass';                                   //Implem of the PDF parser and img extractor
+
+
+class PDFToThumbnails
+{
+
+//Public API: Given a PDF $pdf_file, either as filename or URL:
+//- extracts all images from it (that it can extract), if not already done (see below)
+//- computes a diversity score for all images and sorts them from high to low diversity, if not already done
+//- deletes too non-diverse images since useless
+//- saves the sorted images in the folder $out_path/$name_thumbs/$name.xxx.jpg (where xxx=0,1,2...etc).
+//  If $out_path not given, it defaults to the path of $pdf_file (e.g. /usr/local for /usr/local/bla.pdf)
+//  If $name not given, it defaults to the filename of $pdf_file (e.g. bla for /usr/local/bla.pdf)
+//  Caller can then select one of these images as representative for the PDF
+
+
+protected static function runSafely($pdf, $pdf_file)
+{
+try {
+    // Convert all PHP errors into exceptions
+    set_error_handler(function ($errno, $errstr, $errfile, $errline) { throw new ErrorException($errstr, $errno, 0, $errfile, $errline);}, E_ALL);
+
+    // Ensure critical cleanup happens on fatal errors
+    register_shutdown_function(function () 
+    {
+        $error = error_get_last();
+        if ($error && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR])) 
+        {
+            exit(1);                                        //Serious error: just exit...
+        }                                                   //!!Better: delete most-recent image file in _thumbs since potentially corrupted
+    });
+
+    $pdf->Load($pdf_file);    // Run the PDF extraction; this is the function that may fail
+    return true;              // If we arrived here, Load() executed OK
+  } 
+catch (Throwable $e) 
+  {                           // Handle recoverable errors (non-fatal ones)
+    return false;             // We actually do nothing; if some files were saved by Load(), we'll just process them
+  } 
+finally                       // To be called when the execution of Load() ended safely 
+  {
+     restore_error_handler(); // Restore the default PHP error handling
+  }
+}
+
+
+
+public static function computeThumbnails($pdf_file, $name = '', $out_path = '', $max_files = 10)
+{
+    $name_base_raw = "_raw_image"; 				//Basename for files created by the PDF extractor 
+
+    if ($name!='')
+       $name_base = $name;
+    else
+       $name_base = pathinfo($pdf_file, PATHINFO_FILENAME);
+
+    if ($out_path=='')
+       $out_path = pathinfo($pdf_file, PATHINFO_DIRNAME);
+
+    $qual_thumb_dir = $out_path . "/" . $name_base . "_thumbs";
+
+    $diversityScores = [];                                      //Array to hold selected file names and their diversity scores
+   
+
+    $files = glob($qual_thumb_dir . "/" . $name_base_raw . '.*.jpg');  //Find all raw image files extracted from PDF in
+                                                                //a previous run of the extractor (aborted by some error)
+ 
+    if (count($files)==0)                                       //No pending raw files? Then must run the extractor
+    {                                                           //Save the raw files in $thumb_dir
+        ini_set('memory_limit', '320M');                        //Needed to parse PDFs with many images
+        ini_set('pcre.backtrack_limit', '50000000');            //Needed to parse complex PDFs
+        ini_set('error_reporting', E_ALL);                      //Capture all errors
+        ini_set('display_errors', 0);                           //Don't display any errors since we capture them
+        ini_set('max_execution_time', 300);                     //Allow some reasonable exec time since the PDF extraction is slow
+
+        $pdf     =  new PdfToText();                            //Create PDF image extractor with options to save all images in $thumb_dir
+        $pdf->ImageAutoSaveFileTemplate = $qual_thumb_dir . "/" . $name_base_raw . ".%3d.%s";
+        $pdf->MaxExtractedImages = 50;
+        $pdf->Options  =  PdfToText::PDFOPT_AUTOSAVE_IMAGES;
+        self::runSafely($pdf, $pdf_file);                      //Do the extraction - trap crashes and errors 
+
+        $pdf = null;                                            //Delete the parser since uses a lot of memory
+    
+        $files = glob($qual_thumb_dir . "/" . $name_base_raw . '.*.jpg');    //Find all image files extracted from PDF in $thumb_dir
+        if (count($files)==0) return;                           //No such images? Then the extractor didn't generate anything at all  
+    }
+
+    // Compute diversity scores for all extracted files; delete the really too non-diverse ones since useless
+    foreach ($files as $file)
+    {
+        $gdImage = imagecreatefromjpeg($file);                  //Load the image into a GD resource
+        $fsize   = filesize($file);       
+ 
+        if ($gdImage === false)                                 //Cannot load image from that file so discard it
+        {
+            unlink($file);
+            continue;
+        }
+        
+        $dimx = imagesx($gdImage);
+        $dimy = imagesy($gdImage);
+        $vert = $dimy / $dimx;
+        
+        //Aspect ratio really too poor, discard this image
+        if ($vert > 1.5 || $vert<0.33) { imagedestroy($gdImage); unlink($file); continue; }
+                
+        $wt_h = 0.5;
+        $wt_l = 0.3;
+        $wt_v = 0.2;
+
+        // Compute the hue diversity
+        $hdiv = self::computeHueDiversity($gdImage, 2);               // Adjust sampling if needed
+        $ldiv = self::computeLuminanceDiversity($gdImage, 2);
+        $diversity = ($wt_h * $hdiv) + ($wt_l * $ldiv) + ($wt_v * $vert*$vert);
+
+        // Clean up the image resource since we're done with it
+        imagedestroy($gdImage);
+        
+        // Simply ignore boring images
+        if ($diversity < 0.05 || $ldiv < 0.05) { unlink($file); continue; }
+
+        // Store the filename and its computed diversity score
+        $diversityScores[] = [
+            'file' => basename($file),
+            'size' => $fsize,
+            'diversity' => $diversity,
+            'hdiv' => $hdiv,
+            'ldiv' => $ldiv,
+            'vert' => $vert
+        ];
+    }
+
+    //Sort the images by diversity in descending order
+    usort($diversityScores, function($a, $b) { return $b['size'] < $a['size'] ? -1 : ($b['size'] > $a['size'] ? 1 : 0); });
+
+ 
+    //Rename the thumb files look nicely as 001, 002, ...
+    //Do this after sorting; also change diversityScores[] to reflect the new names
+    //Also cap the max #files to return as told by the $max_files parameter
+
+    $counter = 0;
+    foreach ($diversityScores as &$entry)
+    {
+        $oldname = $entry['file'];
+        
+        if ($counter>=$max_files)
+        {
+            unlink($qual_thumb_dir . "/" . $oldname);
+            continue;
+        }
+        
+        $newname = $name_base . "." . $counter . ".jpg";
+        rename($qual_thumb_dir . "/" . $oldname, $qual_thumb_dir . "/" . $newname);
+        $entry['file'] = $newname;
+        $counter++;
+    }
+    
+    if (count($diversityScores) > $max_files)
+        $diversityScores = array_slice($diversityScores, 0, $max_files);
+    
+    //!!!Dump diversity scores in some text file in _thumbs for potential later use
+}
+
+
+protected static function rgbToHsv($r, $g, $b)                       //Convert a RGB color to HSV.
+{                                                   //Returns an associative array with keys 'h', 's', and 'v'.
+    $r /= 255; $g /= 255; $b /= 255;                //h is in degrees [0,360), s and v are in [0,1].
+    $max = max($r, $g, $b);
+    $min = min($r, $g, $b);
+    $delta = $max - $min;
+    
+    // Hue calculation
+    if ($delta == 0) {
+        $h = 0;
+    } elseif ($max == $r) {
+        $h = 60 * fmod((($g - $b) / $delta), 6);
+    } elseif ($max == $g) {
+        $h = 60 * ((($b - $r) / $delta) + 2);
+    } else { // $max == $b
+        $h = 60 * ((($r - $g) / $delta) + 4);
+    }
+    if ($h < 0) {
+        $h += 360;
+    }
+    
+    // Saturation calculation
+    $s = ($max == 0) ? 0 : $delta / $max;
+    
+    // Value calculation
+    $v = $max;
+    
+    return ['h' => $h, 's' => $s, 'v' => $v];
+}
+
+protected static function computeHueDiversity($gdImage, $sampleStep = 1, $numBins = 36)      //Compute hue diversity metric for a GD image.
+{                                                                           //Returns an entropy value (higher means more diverse).
+    $width  = imagesx($gdImage);                                            //'sampleStep' tells how much the image will be subsampled
+    $height = imagesy($gdImage);                                            //(for speeding up computations)
+    
+    // Initialize histogram bins (each bin covers 360/numBins degrees)
+    $histogram = array_fill(0, $numBins, 0);
+    
+    // Total pixels processed
+    $totalPixels = 0;
+    
+    for ($y = 0; $y < $height; $y += $sampleStep) {
+        for ($x = 0; $x < $width; $x += $sampleStep) {
+            $rgb = imagecolorat($gdImage, $x, $y);
+            // Extract RGB components from the integer (works regardless of truecolor or palette)
+            $r = ($rgb >> 16) & 0xFF;
+            $g = ($rgb >> 8) & 0xFF;
+            $b = $rgb & 0xFF;
+            
+            $hsv = self::rgbToHsv($r, $g, $b);
+            $hue = $hsv['h'];  // Hue in degrees
+            
+            // Determine which bin this hue falls into
+            $bin = (int) floor($hue / (360 / $numBins));
+            if ($bin >= $numBins) {
+                $bin = $numBins - 1;
+            }
+            
+            $histogram[$bin]++;
+            $totalPixels++;
+        }
+    }
+    
+    // Normalize the histogram (convert counts to probabilities)
+    if ($totalPixels > 0) {
+        foreach ($histogram as &$count) {
+            $count = $count / $totalPixels;
+        }
+    }
+    
+    // Compute Shannon entropy for the hue distribution:
+    // H = -sum(p * log2(p))
+    $entropy = 0;
+    foreach ($histogram as $p) {
+        if ($p > 0) {
+            $entropy -= $p * log($p, 2);
+        }
+    }
+    
+    // Maximum possible entropy is log2(numBins)
+    // We could return a normalized value:
+    $normalizedEntropy = $entropy / log($numBins, 2);
+    
+    return $normalizedEntropy;
+}
+
+
+protected static function computeLuminanceDiversity($image, $samplingStep = 2)               // Compute luminance diversity of a GD image (using the luminance variance)
+{
+    $width = imagesx($image);
+    $height = imagesy($image);
+    
+    $luminanceValues = [];
+
+    // Loop over the image, sampling pixels
+    for ($y = 0; $y < $height; $y += $samplingStep) {
+        for ($x = 0; $x < $width; $x += $samplingStep) {
+            // Get the RGB values of the pixel at ($x, $y)
+            $rgb = imagecolorat($image, $x, $y);
+            
+            // Extract the red, green, and blue values
+            $r = ($rgb >> 16) & 0xFF;
+            $g = ($rgb >> 8) & 0xFF;
+            $b = $rgb & 0xFF;
+            
+            // Calculate the luminance using the standard formula
+            $luminance = 0.299 * $r + 0.587 * $g + 0.114 * $b;
+            
+            // Store the luminance value
+            $luminanceValues[] = $luminance;
+        }
+    }
+    
+    // Compute the diversity by calculating the standard deviation of luminance values
+    $mean = array_sum($luminanceValues) / count($luminanceValues);
+    $variance = 0;
+    foreach ($luminanceValues as $luminance) {
+        $variance += pow($luminance - $mean, 2);
+    }
+
+    // Normalize the variance to be roughly in [0,1]
+    $diversity = sqrt($variance / count($luminanceValues));
+    $normalizedDiversity = min(1, $diversity / 74); // Clamp to [0,1]
+    return $normalizedDiversity;
+}
+    
+}
+
+    
+?>
+
+
+
+

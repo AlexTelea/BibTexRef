@@ -1,0 +1,106 @@
+
+
+
+.bibtex-img-thumb-cont 
+{
+        width: 120px;
+        height: 90px;
+        border-radius: 10px;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+        box-shadow: 3px 3px 7px rgba(0, 0, 0, 0.4);
+}
+
+.bibtex-small-thumb-cont 
+{
+    height: 20px;
+    display: inline-block;
+}
+
+.bibtex-zoom-wrapper { position: relative; }
+
+.bibtex-thumb { display: block; }
+
+.bibtex-zoomed 
+{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 10;
+            image-rendering: pixelated;
+            max-width: none;
+            max-height: 80vh;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            background: white;
+            padding: 4px;
+}
+         
+.bibtex-zoom-wrapper:hover .bibtex-zoomed { display: block; }
+
+.bibtex-editor 
+{
+            width: 100%;            /* Make it take full width */
+            height: 400px;          /* Set a fixed height */
+            font-family: monospace; /* Makes it easier to edit code */
+}
+
+.bibtex-edit-bib-form 
+{
+            max-width: 800px;       /* Prevent it from stretching too wide */
+            margin: 0 auto;          /* Center the whole form */
+}
+                    
+.bibtex-bib-form 
+{
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* Align items to the left */
+            gap : 10px;
+}
+
+.bibtex-save-button 
+{
+            align-self: flex-start;
+            margin: 0;
+            padding: 5px 15px;
+}
+
+#randthumbs-gallery {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: 8px;
+  max-width: 700px;
+  margin: 0;
+  padding: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+#randthumbs-gallery div {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  overflow: hidden;
+}
+
+#randthumbs-gallery img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+#randthumbs-gallery img.visible {
+  opacity: 1;
+}
+
+
+

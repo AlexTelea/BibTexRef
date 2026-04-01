@@ -1,0 +1,22 @@
+
+
+bibtexref.php:
+==============
+                
+-handle group-by expressions which return NULL better
+-refine -managebib action to upload .bib, manage the various caches separately, etc
+
+
+
+
+
+PdfToText.phpclass:
+===================
+
+-the saving of CMYK Jpeg images is messed up. The problem is that there's no GD decoder which seems to work well for such images 
+(colors are messed up somehow). I am kind of hacking that part of the code... An elegant solution would involve ImageMagick but that
+is not available on many web servers...
+
+
+
+
