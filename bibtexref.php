@@ -61,6 +61,8 @@ $lastChar = '';                                                 //State var: hel
 
 $BibtexKeepFlag = false;                                        //State var: controls how xKeep() works, see below
 
+$BibThumbC = ".bib-thumb-c";
+
 $BibtexBibDir = $UploadDir . "/Bibtex";
 $BibtexBibUrl = $UploadUrlFmt . "/Bibtex";
 $BibtexCustomFilename = "bib_custom";
@@ -366,7 +368,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')                                   //T
 
 function LoadPrologue($v)                                                            //Adds (at top of page) all code which should appear before any
 {								                     //actual Bib entries are added. So far, this is code for select/sort/etc UI 
-  global $PubDirUrl, $BibMemberAuthors;                                              //and JS code doing the thumbnail animation. Also sets some global vars
+  global $PubDirUrl, $BibMemberAuthorsi, $BibThumbC;                                 //and JS code doing the thumbnail animation. Also sets some global vars
 
   $ret = "";							                  
 
