@@ -1136,8 +1136,11 @@ class BibtexEntry                                                           //Su
       {
           $auth = name_fmt($aut[$i], 'name_abbrev');
           $this->authors[] = implode(" ", $auth); 
-          $this->authors_lastname[] = trim($auth[1]);
-   
+
+          $lastname = (str_word_count($auth[1]) === 1) ? ucfirst(strtolower($auth[1])) : ucfirst(explode(' ', $auth[1])[0]) . substr($auth[1], strpos($auth[1], ' '));    
+
+          $this->authors_lastname[] = $lastname;
+
           $auth_name = name_fmt($aut[$i], 'name_full');
           $auth_name = implode(" ", $auth_name); 
           $auth_all_names = explode(" ", $auth_name);
