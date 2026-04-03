@@ -1047,28 +1047,44 @@ function name_full($name)                                                   //Id
     return trim($name);
 }
     
-    
-function name_fmt($name, $name_abbrev)                                     //Format author names from Bibtex in a canonical way:
-{                                                                          // (1) lastname, firstname -> firstname lastname
-    $firstlast = preg_split("/,/", $name);                                 // (2) depending on name_abbrev, the firstname can be abbreviated to initials only or not
-    
-    $ret = "";
-    
-    if (count($firstlast)==2)                                              //name in format 'lastname, firstname'
-    {
-        $ret = $name_abbrev($firstlast[1]) . " " . $firstlast[0];           //name in format 'firstname lastname'
-    }
-    else
-    {
-        $nn = explode(" ",$name);
-        for($i=0;$i<count($nn)-1;$i++)
-        {
-            $ret .= $name_abbrev($nn[$i]);
+function name_fmt($name, $name_abbrev) 
+{
+    $name = trim($name);
+
+    // List of common particles in last names
+    $particles = ['da','de','del','der','di','du','la','le','van','von','dos','den','el'];
+    $suffixes = ['Jr','Sr','III','IV'];
+
+    $first = '';
+    $last = '';
+
+    $parts = preg_split("/,/", $name);                                      // Check for comma: "Lastname, Firstname"
+    if (count($parts) == 2) {
+        $last = trim($parts[0]);
+        $first = $name_abbrev(trim($parts[1]));
+    } else {                                                                // "Firstname Lastname"
+        $tokens = preg_split('/\s+/', $name);
+        $num = count($tokens);
+
+        if ($num == 1) {                                                    // Only one word: treat as first name
+            $first = $name_abbrev($tokens[0]);
+            $last = '';
+        } else {                                                            // Assume last word is last name
+            $last = array_pop($tokens);
+
+            while ($tokens && in_array(end($tokens), $suffixes))            // Check for suffix 
+                $last = array_pop($tokens) . ' ' . $last;
+            
+            while ($tokens && in_array(strtolower(end($tokens)), $particles)) 
+                $last = array_pop($tokens) . ' ' . $last;
+
+            $first = $name_abbrev(implode(' ', $tokens));
         }
-        $ret .= " " . $nn[count($nn)-1];
     }
-    return $ret;
+
+    return [$first, $last];
 }
+
     
    
 
@@ -1078,7 +1094,7 @@ function evalExpr(string $expr, object $context)                            //Ev
     $expr = html_entity_decode($expr, ENT_QUOTES);                          //We use this helper func to ensure (as much as possible) that no unsafe PHP code can be executed
     $fn = function() use ($expr) 
     { return eval("return ($expr);"); }; 
-    $fn = $fn->bindTo($context); // now $this inside eval() = $context 
+    $fn = $fn->bindTo($context);                                            // now $this inside eval() = $context 
     return $fn(); 
 }
 
@@ -1119,17 +1135,16 @@ class BibtexEntry                                                           //Su
       for ($i = 0; $i < count($aut); $i++)
       {
           $auth = name_fmt($aut[$i], 'name_abbrev');
-          $this->authors[] = $auth;
-          $this->authors_lastname[] = array_pop(explode(' ', $auth));
-      
+          $this->authors[] = implode(" ", $auth); 
+          $this->authors_lastname[] = trim($auth[1]);
+   
           $auth_name = name_fmt($aut[$i], 'name_full');
-          
-          $auth_all_names = explode(" ",$auth_name);
-          
+          $auth_name = implode(" ", $auth_name); 
+          $auth_all_names = explode(" ", $auth_name);
           if (strlen($auth_all_names[0]) == 1)
               $auth_all_names[0] .= ".";
-          
-          $this->authors_fullname[] = implode(" ",$auth_all_names);
+
+          $this->authors_fullname[] = implode(" ", $auth_all_names);
       }
 
       $this->keywords = explode(",", $this->getFormat('KEYWORDS'));
@@ -1146,10 +1161,10 @@ class BibtexEntry                                                           //Su
 
       for ($i = 0; $i < count($edi)-1; $i++)
         {
-           $ret = $ret . name_fmt($edi[$i], 'name_abbrev');
+           $ret = $ret . implode(" ", name_fmt($edi[$i], 'name_abbrev'));
            $ret = $ret . ", ";
         }
-        $ret = $ret . name_fmt($edi[count($edi)-1], 'name_abbrev');
+        $ret = $ret . implode(" ", name_fmt($edi[count($edi)-1], 'name_abbrev'));
         
       return $ret;
     }
@@ -2151,7 +2166,7 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
         else $sort_reverse = false;
     }
 
-    if (isset($_COOKIE['bibtex_group']))                                                        //If a sorting criterion given via the UI,
+    if (isset($_COOKIE['bibtex_group']))                                                        //If grouping criterion given via the UI,
     {                                                                                           //make this override the one in (:bibquery:)
        $user_group = $_COOKIE['bibtex_group'];
        if ($user_group == 'group_type')
@@ -2185,6 +2200,8 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
       else
          $grp_res[$key][] = $element;
     }
+
+
 
     if ($sort!='')                                                                              //Execute in-group sorting (if we have any criterion) 
     { 
@@ -2229,11 +2246,15 @@ function AddBibEntries($grp_res)                                                
 
     foreach ($grp_res as $key => $entries)                                                      //add Bib entries for all groups
     {
-        if ($key!="") $ret .= "!" . ucfirst(strtolower($key)) . "\n";					                     //Add group title i.e. its key value (if any available)
-        $ret .= "(:table cellspacing=0 bgcolor=#efefef :) " . "\n";   		             //Add all group entries in a table
+        if ($key!="") 
+        {
+           $key = (str_word_count($key) === 1) ? ucfirst(strtolower($key)) : ucfirst(explode(' ', $key)[0]) . substr($key, strpos($key, ' ')); 
+           $ret .= "!" . $key . "\n";		                //Add group title i.e. its key value (if any available)
+        }
+        $ret .= "(:table cellspacing=0 bgcolor=#efefef :) " . "\n";   		                //Add all group entries in a table
         foreach($entries as $value)
         {
-          if ($lod=='Full')						                                         //first cell: thumbnails (if LOD is 'Full')
+          if ($lod=='Full')						                        //First cell: thumbnails (if LOD is 'Full')
           {
              $thumbnail = makeThumb($value);                                             //Build all the complex code for managing the thumbnail
              $ret .= "(:cellnr width=20%:) %center% %width=20pct% $thumbnail \n";
