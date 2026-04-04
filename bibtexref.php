@@ -452,7 +452,7 @@ function LoadPrologue($v)                                                       
                     <input type='hidden' name='level_of_detail' value='level_of_detail'>
                   <button type='submit'> $currentLOD </button> </form>") . "\n"; 
 
-    $currentCharts = isset($_COOKIE['show_charts']) ? $_COOKIE['show_charts'] : 'None'; //!!!
+    $currentCharts = isset($_COOKIE['show_charts']) ? $_COOKIE['show_charts'] : 'None';      //Add HTML to show the chart-selecting option; show currently-set chart option of any
     $ret .= Keep("<span style='margin: 0; padding-left: 5px; padding-right: 5px'><strong>Stats</strong></span>
                   <form method='post' action='?action=show_charts'>
                     <input type='hidden' name='show_charts' value='show_charts'>
