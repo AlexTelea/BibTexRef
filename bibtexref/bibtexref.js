@@ -17,13 +17,8 @@ function drawBarChart(containerId, inputData)
   const minBarHeight = 4;                                          //Min bar height, defined so one can see/brush the bar
  
   // Convert object to sorted array
-  const data = Object.entries(inputData)
-         .map(([label, count]) => 
-         {
-            const formattedLabel = isNaN(label)? label.charAt(0).toUpperCase() + label.slice(1).toLowerCase() : label;
-            return { label: formattedLabel, count: +count };
-         });
-  
+  const data = Object.entries(inputData).map(([label, count]) => ({ label, count: +count }));
+ 
   const margin = { top: 20, right: 20, bottom: 80, left: 50 };
   const container = document.getElementById(containerId);
   const height = 200;

@@ -1137,7 +1137,7 @@ class BibtexEntry                                                           //Su
           $auth = name_fmt($aut[$i], 'name_abbrev');
           $this->authors[] = implode(" ", $auth); 
 
-          $lastname = (str_word_count($auth[1]) === 1) ? ucfirst(strtolower($auth[1])) : ucfirst(explode(' ', $auth[1])[0]) . substr($auth[1], strpos($auth[1], ' '));    
+          $lastname = (strpos($auth[1], ' ') === false)? ucfirst(strtolower($auth[1])) : ucfirst(explode(' ', $auth[1])[0]) . substr($auth[1], strpos($auth[1], ' '));
 
           $this->authors_lastname[] = $lastname;
 
@@ -2251,8 +2251,8 @@ function AddBibEntries($grp_res)                                                
     {
         if ($key!="") 
         {
-           $key = (str_word_count($key) === 1) ? ucfirst(strtolower($key)) : ucfirst(explode(' ', $key)[0]) . substr($key, strpos($key, ' ')); 
-           $ret .= "!" . $key . "\n";		                //Add group title i.e. its key value (if any available)
+           $key = (strpos($key, ' ') === false)? ucfirst(strtolower($key)) : $key;
+           $ret .= "!" . $key . "\n";		                                                //Add group title i.e. its key value (if any available)
         }
         $ret .= "(:table cellspacing=0 bgcolor=#efefef :) " . "\n";   		                //Add all group entries in a table
         foreach($entries as $value)
