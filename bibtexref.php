@@ -1137,7 +1137,7 @@ class BibtexEntry                                                           //Su
           $auth = name_fmt($aut[$i], 'name_abbrev');
           $this->authors[] = implode(" ", $auth); 
 
-          $lastname = (strpos($auth[1], ' ') === false)? ucfirst(strtolower($auth[1])) : ucfirst(explode(' ', $auth[1])[0]) . substr($auth[1], strpos($auth[1], ' '));
+          $lastname = (strpos($auth[1], ' ') === false)? ucfirst(strtolower($auth[1])) : ucfirst($auth[1]);
 
           $this->authors_lastname[] = $lastname;
 
@@ -2194,14 +2194,21 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
     {
       $key = ($group!='')? evalExpr($group,$element) : "";                                      //Criterion to evaluate (if any)
       $key = $key ?? "";                                                                        //Traps cases where the criterion evaluates to NULL
-                                                                                                //Evaluating the criterion can return a single value (e.g. year)
-      if (is_array($key))                                                                       //or an array (e.g. author names). If we have an array, simply
+                                                                                                //Evaluating the criterion can return a single value (e.g. year) or an array (e.g. author names)
+
+      if (is_array($key))                                                                       //If we have an array, simply
       {                                                                                         //use all its elements as values to group by
          foreach ($key as $key_elem)                                                            //NB: this can replicate Bib elements which will appear multiple times
-           $grp_res[$key_elem][] = $element;                                                    //    under different group-by values (which is the desired result)
+         {                                                                                      //    under different group-by values (which is the desired result)
+           $key_elem = (strpos($key_elem, ' ') === false)? ucfirst(strtolower($key_elem)) : $key_elem; 
+           $grp_res[$key_elem][] = $element;                                                    //NB: here and next, we format $key (or its elems) to be capitalized-rest-lowercase if single words
+         }                                                                                      //This nicely makes all keys EXCEPT author lastnames (which should be used as they are) appear uniform
       }
       else
+      {
+         $key = (strpos($key, ' ') === false)? ucfirst(strtolower($key)) : $key; 
          $grp_res[$key][] = $element;
+      }
     }
 
 
@@ -2247,14 +2254,11 @@ function AddBibEntries($grp_res)                                                
     $num_entries = 0;									        //Get max #entries we want to dump (as integer),
     $max_entries = ($max != '')? (int)$max : 100000;					        //if any provided
 
-    foreach ($grp_res as $key => $entries)                                                      //add Bib entries for all groups
+    foreach ($grp_res as $key => $entries)                                                      //Add Bib entries for all groups
     {
-        if ($key!="") 
-        {
-           $key = (strpos($key, ' ') === false)? ucfirst(strtolower($key)) : $key;
-           $ret .= "!" . $key . "\n";		                                                //Add group title i.e. its key value (if any available)
-        }
-        $ret .= "(:table cellspacing=0 bgcolor=#efefef :) " . "\n";   		                //Add all group entries in a table
+        if ($key!="") $ret .= "!" . $key . "\n";                                                //First add the group-key as a heading
+        
+        $ret .= "(:table cellspacing=0 bgcolor=#efefef :) " . "\n";   		                //Then add all group entries in a table
         foreach($entries as $value)
         {
           if ($lod=='Full')						                        //First cell: thumbnails (if LOD is 'Full')
