@@ -991,7 +991,7 @@ function extractUrl($text)
     
     return null; // No URL found
 }
-                 
+
 function titleCase($title)                                      //Capitalizes text such as titles
 {
     // List of words to keep lowercase unless at start or end
@@ -1017,6 +1017,7 @@ function titleCase($title)                                      //Capitalizes te
                 
     return implode(' ', $words);                                            //Join the words back into a string
 }
+
     
 function name_abbrev($name)                                                 //Abbreviate first name (possibly having several components, some already abbreviated, some not)
 {                                                                           //in the form "initial1.initial2."  ...etc
@@ -1245,6 +1246,7 @@ class BibtexEntry                                                           //Su
         $ret = str_replace("{", "", $ret);
         $ret = str_replace("}", "", $ret);
       }
+      
       return $ret;
     }
 
