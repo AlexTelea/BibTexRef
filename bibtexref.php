@@ -992,31 +992,52 @@ function extractUrl($text)
     return null; // No URL found
 }
 
-function titleCase($title)                                      //Capitalizes text such as titles
+
+function titleCase($title)                                                 //Formats a 'TITLE' entry by capitalizing and keeping stuff in {...} unchanged
 {
-    // List of words to keep lowercase unless at start or end
+    // Split into MathJax/non-MathJax parts since we don't want to touch {..} in MathJax
+    $parts = preg_split('/(\$.*?\$|\\\\\(.*?\\\\\))/',$title,-1,PREG_SPLIT_DELIM_CAPTURE);
+
+    // Words to keep lowercase
     $smallWords = [
         'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'if', 'in',
         'nor', 'of', 'on', 'or', 'so', 'the', 'to', 'up', 'yet', 'with'
     ];
-    
-    // Split the title into words
-    $words = explode(' ', $title);
-    
-    foreach ($words as $key => $word)
+
+    foreach ($parts as &$part)
     {
-        // Lower-case small words if they are not at start or end
-        if ($key !== 0 && $key !== count($words) - 1 && in_array($word, $smallWords))
-            $words[$key] = strtolower($word);
-        
-        if ($key === 0 || $key === count($words) - 1 || !in_array($word, $smallWords))
+        // Skip MathJax parts entirely
+        if (preg_match('/^\$.*\$$|^\\\\\(.*\\\\\)$/', $part)) continue;
+
+        // Protect {...}
+        $protected = [];
+        $part = preg_replace_callback('/\{([^}]+)\}/', function ($m) use (&$protected) {
+            $key = '__P_' . count($protected) . '__';
+            $protected[$key] = $m[1];
+            return $key;
+        }, $part);
+
+        // Apply the selective capitalization to the unprotected parts
+        $words = explode(' ', $part);
+
+        foreach ($words as $key => $word)
         {
-            $words[$key] = ucfirst($word);
+            if ($key !== 0 && $key !== count($words) - 1 && in_array(strtolower($word), $smallWords))
+                $words[$key] = strtolower($word);
+            else
+                $words[$key] = ucfirst($word);
         }
+
+        $part = implode(' ', $words);
+
+        // Restore protected {...} (without braces)
+        foreach ($protected as $k => $v)
+            $part = str_replace($k, $v, $part);
     }
-                
-    return implode(' ', $words);                                            //Join the words back into a string
+
+    return implode('', $parts);
 }
+
 
     
 function name_abbrev($name)                                                 //Abbreviate first name (possibly having several components, some already abbreviated, some not)
@@ -1238,12 +1259,12 @@ class BibtexEntry                                                           //Su
     }
 
 
-    function getFormat($field)
-    {
-      $ret = $this->get($field);
-      if ($ret)
-      {
-        $ret = str_replace("{", "", $ret);
+    function getFormat($field)                                  //Gets named field from this Bibtex entry; removes { and } from it since
+    {                                                           // (a) these should not be rendered at all and (b) they can mess up PMWiki parsing.
+      $ret = $this->get($field);                                //Exception: Don't do this for 'TITLE' fields since {...} tell there that that text
+      if ($ret && $field!=='TITLE')                             //should not be capitalized (see titleCase()).
+      {                                                         //NB: This doesn't interfere with {..} in MathJax mode; those are replaced by HTML chars
+        $ret = str_replace("{", "", $ret);                      //    already at this point (see ParseEntries())
         $ret = str_replace("}", "", $ret);
       }
       
@@ -2433,9 +2454,9 @@ function ParseEntries($fname, $entries)                                         
            function($m){ return str_replace(['{','}'], ['&#123;','&#125;'], $m[0]); },
            $value);
 
-        $value = str_replace("{","", $value);                                       //Strip ALL other braces (not in math mode). Needed otherwise 
-        $value = str_replace("}","", $value);                                       //PMWiki interprets them as markup
-                //!! $value = str_replace("~"," ", $value);                         //Cannot really do this since '~' may occur in URL's...
+        //!!$value = str_replace("{","", $value);                                       //Strip ALL other braces (not in math mode). Needed otherwise 
+        //!!$value = str_replace("}","", $value);                                       //PMWiki interprets them as markup
+        //!! $value = str_replace("~"," ", $value);                         //Cannot really do this since '~' may occur in URL's...
         $value = str_replace("\\textemdash","-", $value);
         $value = str_replace("\\textendash","-", $value);
         $value = str_replace("\\textquoteleft","'",$value);
