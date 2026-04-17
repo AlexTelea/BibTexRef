@@ -18,7 +18,7 @@ function drawBarChart(containerId, inputData)
  
   // Convert object to sorted array
   const data = Object.entries(inputData).map(([label, count]) => ({ label, count: +count }));
- 
+  const total = d3.sum(data, d => d.count); 
   const margin = { top: 20, right: 20, bottom: 80, left: 50 };
   const container = document.getElementById(containerId);
   const height = 200;
@@ -37,8 +37,7 @@ function drawBarChart(containerId, inputData)
     .style('pointer-events', 'none')
     .style('opacity', 0);
  
-  // --- Dynamic chart width ---
-  const nBars = data.length;
+  const nBars = data.length;                                        // Dynamic chart width computation
   const containerWidth = 0.7*container.clientWidth || 300;          // fallback if clientWidth=0
  
 
@@ -46,8 +45,7 @@ function drawBarChart(containerId, inputData)
   const maxLabels = Math.floor(containerWidth / 15);                // Determine max #labels to show given min width 15 per label
   const step = Math.max(1, Math.ceil(labels.length / maxLabels));
  
-  // --- Scales ---
-  const x = d3.scaleBand()
+  const x = d3.scaleBand()                                          // Compute scales
               .domain(data.map(d => d.label))
               .range([margin.left, containerWidth - margin.right])
               .padding(barPadding);
@@ -67,8 +65,7 @@ function drawBarChart(containerId, inputData)
               .nice()
               .range([height - margin.bottom, margin.top]);
  
-  // --- SVG ---
-  const svg = d3.select(container)
+  const svg = d3.select(container)                                 // Start adding the SVG content i.e. the stuff to draw
                 .append('svg')
                 .attr('width', containerWidth)
                 .attr('height', height);
@@ -89,18 +86,15 @@ function drawBarChart(containerId, inputData)
      .on('mouseout', function() { tooltip.style('opacity', 0); });
 
  
-  // --- X Axis ---
-  const xAxis = svg.append('g')
+  const xAxis = svg.append('g')                                     // X axis legend
      .attr('transform', 'translate(0,' + (height - margin.bottom) + ')')
      .call(d3.axisBottom(x));
 
-  // Remove labels that are too dense
-  xAxis.selectAll('.tick')
+  xAxis.selectAll('.tick')                                          // Remove labels that are too dense
        .filter((d, i) => i % step !== 0)
        .remove();
   
-  // Rotate remaining labels
-  xAxis.selectAll('.tick text')
+  xAxis.selectAll('.tick text')                                     // Rotate remaining labels
        .each(function() {
           const t = d3.select(this);
           t.text(decodeEntities(t.text()));
@@ -111,6 +105,19 @@ function drawBarChart(containerId, inputData)
   svg.append('g')
      .attr('transform', 'translate(' + margin.left + ',0)')
      .call(d3.axisLeft(y).ticks(8));
+
+  const tickText = svg.select('.tick text').node();                 // Get D3 style used for tick labels, use same for total count below
+  const computedStyle = window.getComputedStyle(tickText);
+
+  svg.append('text')                                                // Add total count inside chart top-left
+   .attr('x', margin.left + 5)    
+   .attr('y', margin.top)     
+   .attr('dy', '0.8em')            
+   .style('font-size', computedStyle.fontSize)
+   .style('font-family', computedStyle.fontFamily)
+   .style('font-weight', computedStyle.fontWeight)
+   .style('fill', '#757575')   
+   .text(`Total: ${total}`);
 }
 
 function startRandomGallery(containerId, imageList, count, interval = 3000)
