@@ -113,7 +113,7 @@ function drawBarChart(containerId, inputData)
 
   svg.append('text')                                                // Add total count inside chart top-left
    .attr('x', margin.left + 5)    
-   .attr('y', margin.top)     
+   .attr('y', margin.top - 5)     
    .attr('dy', '0.8em')            
    .style('font-size', computedStyle.fontSize)
    .style('font-family', computedStyle.fontFamily)
