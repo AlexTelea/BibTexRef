@@ -1159,7 +1159,7 @@ class BibtexEntry                                                           //Su
           $auth = name_fmt($aut[$i], 'name_abbrev');
           $this->authors[] = implode(" ", $auth); 
 
-          $lastname = (strpos($auth[1], ' ') === false)? ucfirst(strtolower($auth[1])) : ucfirst($auth[1]);
+          $lastname =  ucfirst($auth[1]);                                  //Needed since we may have lastnames like "da Silva" or "van Wijk"
 
           $this->authors_lastname[] = $lastname;
 
@@ -2192,11 +2192,13 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
         else $sort_reverse = false;
     }
 
+    $capitalize = false;                                                                        //Only capitalize some fields (not author names or years in any case)
+
     if (isset($_COOKIE['bibtex_group']))                                                        //If grouping criterion given via the UI,
     {                                                                                           //make this override the one in (:bibquery:)
        $user_group = $_COOKIE['bibtex_group'];
        if ($user_group == 'group_type')
-          $group = '$this->entrytype';
+          { $group = '$this->entrytype'; $capitalize = true; }
        else if ($user_group == 'group_year')
           $group = '!$this->get(\'YEAR\')';
        else if ($user_group == 'group_author')
@@ -2223,13 +2225,13 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
       {                                                                                         //use all its elements as values to group by
          foreach ($key as $key_elem)                                                            //NB: this can replicate Bib elements which will appear multiple times
          {                                                                                      //    under different group-by values (which is the desired result)
-           $key_elem = (strpos($key_elem, ' ') === false)? ucfirst(strtolower($key_elem)) : $key_elem; 
+           $key_elem = (strpos($key_elem, ' ') === false &&  $capitalize === true)? ucfirst(strtolower($key_elem)) : $key_elem; 
            $grp_res[$key_elem][] = $element;                                                    //NB: here and next, we format $key (or its elems) to be capitalized-rest-lowercase if single words
          }                                                                                      //This nicely makes all keys EXCEPT author lastnames (which should be used as they are) appear uniform
       }
       else
       {
-         $key = (strpos($key, ' ') === false)? ucfirst(strtolower($key)) : $key; 
+         $key = (strpos($key, ' ') === false && $capitalize === true)? ucfirst(strtolower($key)) : $key; 
          $grp_res[$key][] = $element;
       }
     }
