@@ -104,7 +104,9 @@ function drawBarChart(containerId, inputData)
 
   svg.append('g')
      .attr('transform', 'translate(' + margin.left + ',0)')
-     .call(d3.axisLeft(y).ticks(8));
+     .call(d3.axisLeft(y)
+             .ticks(8)
+             .tickFormat(d => Number.isInteger(d) ? d : ''));
 
   const tickText = svg.select('.tick text').node();                 // Get D3 style used for tick labels, use same for total count below
   const computedStyle = window.getComputedStyle(tickText);
