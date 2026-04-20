@@ -14,7 +14,14 @@ Markup('editbib', 'directives','/\\(:editbib\\s+([^:]+):\\)/',"EditBibForm");
 
 #Select and show Bibtex entries from the file arg1, which match condition in arg2, grouped by arg3, sorted by arg4, capped to max given by arg5
 #
-Markup("bibtexquery","fulltext","/\\bbibtexquery:\\[(.*?)\\]\\[(.*?)\\]\\[(.*?)\\]\\[(.*?)\\]\\[(.*?)\\]/","BibQuery_callback");
+//!!Markup("bibtexquery","fulltext","/\\bbibtexquery:\\[(.*?)\\]\\[(.*?)\\]\\[(.*?)\\]\\[(.*?)\\]\\[(.*?)\\]/","BibQuery_callback");
+Markup(
+  "bibtexquery",
+  "fulltext",
+  "/\\(:\\s*bibtexquery\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*:\\)/",
+  "BibQuery_callback"
+);
+
 
 #Displays a grid of arg1 random thumbnails picked from those present in the Bibtex database
 #
