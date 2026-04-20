@@ -6,7 +6,14 @@ if (!defined('PmWiki')) exit();
 
 #Add this before anything else; this initializes the BibTexQuery engine
 #
-Markup('bibinit','<bibtexquery','/bibinit:(?:\[([^\]]*)\])?(?:\[([^\]]*)\])?/','LoadPrologue');
+//!Markup('bibinit','<bibtexquery','/bibinit:(?:\[([^\]]*)\])?(?:\[([^\]]*)\])?/','LoadPrologue');
+Markup(
+  'bibinit',
+  'directives',
+  "/\\(:\\s*bibinit(?:\\s*\\[(.*?)\\])?(?:\\s*\\[(.*?)\\])?\\s*:\\)/",
+  "LoadPrologue"
+);
+
 
 #Shows an editor for the BibTex file given in arg1
 #
