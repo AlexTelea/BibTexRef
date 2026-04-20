@@ -1,5 +1,4 @@
-#
-#  bibtexref.php:        A PMWiki cookbook for displaying a wiki page showing nicely formatted references from a given BibTex file
+#  bibtexref.php:        PMWiki cookbook that creates a wiki page showing nicely organized entries from a given BibTex file
 #
 #
 #  1. Installation
@@ -16,23 +15,21 @@
 #   -copy the Bibtex file file.bib you want to show to the Bibtex/ directory.
 #   -in the wikipage where you want to show entries from this file, start creating the publication list by
 #
-#           bibinit: [gui][members] 
+#           (:bibinit: [gui][members]:) 
 #
 #    Set [gui] if you want to show buttons for sorting/selecting publications (see below).
-#    Set [members] to a list of author lastnames, e.g. "Smith,"Jones","Abel", if you want next to allow grouping papers by authors == members of a research team.
-#     
+#    Set [members] to a list of author lastnames, e.g. "Smith,"Jones","Abel" if you want next to group papers by members of a research team. 
 #
 #    Next specify which entries you want to show and how to group/sort them.
 #    To e.g. show entries having author Smith, grouped by increasing year, sorted by pub type:
 #
-#           bibtexquery:[file.bib][strpos($this->get('AUTHOR'),'Smith')!==false][$this->get('YEAR')][$this->entrytype][]
+#           (:bibtexquery [file.bib][strpos($this->get('AUTHOR'),'Smith')!==false][$this->get('YEAR')][$this->entrytype][]:)
 #
 #    To show all Bibtex entries grouped by year:
-#           bibtexquery:[test.bib][][!$this->get('YEAR')][][]  
+#           (:bibtexquery: [test.bib][][!$this->get('YEAR')][][]:)  
 #
-#    The syntax is bibtexquery:[file.bib][selection_condition][group_by_expr][sort_on_expr][max_entries]
-#    All parameters are mandatory. To skip setting a parameter, set it to [].
-#    See point 5 below for a full explanation of the parameters.
+#    The syntax is (:bibtexquery [file.bib][selection_condition][group_by_expr][sort_on_expr][max_entries]:)
+#    All parameters are mandatory. To skip setting a parameter, set it to []. See point 5 below for a full parameter explanation.
 #
 #   -add in the wikipage where you want to show the Bibtex editor for ?action=editbib (usually same where the Bibtex file is shown), best at top:
 #
@@ -52,7 +49,7 @@
 #
 #           (:bibthumbsgallery N:)
 #
-#    to that place in the wiki page. All images uploaded by users are used plus a small subset of the PDF auto-gemerated ones. 
+#    to that place in the wiki page. All images uploaded by users are used plus a small subset of the PDF auto-generated ones. 
 #   
 #  3. Customization
 #  For some paper called myRef in the Bibtex file:
