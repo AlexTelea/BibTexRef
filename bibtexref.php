@@ -2148,6 +2148,7 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
     $cond  = trim($cond);
     $sort  = trim($sort);
     $group = trim($group);
+    $max   = trim($max);
 
     if (!$BibEntries[$file])                                                                    //Make sure we loaded the Bibtex file
         if (!ReadBibFile($file))
@@ -2236,8 +2237,6 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
       }
     }
 
-
-
     if ($sort!='')                                                                              //Execute in-group sorting (if we have any criterion) 
     { 
       foreach ($grp_res as $key => $entries)                                                
@@ -2260,7 +2259,22 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
     if (isset($grp_res['Others']))                                                              //5. If we use the key 'Others' (from group by members), make sure it comes last
       $grp_res = array_diff_key($grp_res, ['Others' => true]) + ['Others' => $grp_res['Others']];
 
-    return [$group,$grp_res];
+    $max = ($max != '' && is_numeric($max))? (int)$max : 100000;                                //6. Only return at most $max items (if $max is set) 
+
+    $count = 0;
+    $limited = [];
+
+    foreach ($grp_res as $gkey => $entries) 
+       foreach ($entries as $e) 
+       {
+          if ($count >= $max) break 2;
+          $limited[$gkey][] = $e;
+          $count++;
+       }
+    
+    $grp_res = $limited;
+      
+    return [$group,$grp_res];                                                                   //7. Return the group names and the group contents we created
 }
 
 
@@ -2275,9 +2289,6 @@ function AddBibEntries($grp_res)                                                
     if (isset($_COOKIE['level_of_detail']))                                                     //If a level-of-detail was given via the UI, use it
        $lod = $_COOKIE['level_of_detail'];
     else $lod = 'Full';
-
-    $num_entries = 0;									        //Get max #entries we want to dump (as integer),
-    $max_entries = ($max != '')? (int)$max : 100000;					        //if any provided
 
     foreach ($grp_res as $key => $entries)                                                      //Add Bib entries for all groups
     {
@@ -2297,13 +2308,8 @@ function AddBibEntries($grp_res)                                                
           if ($add_numbers) $ret .= "'''". $tot_entries - $num_entries. "'''. ";         //If we want to number entries: do that
 
           $ret .= $value->getRichSummary(true,$lod) . "\n";                              //second cell: summary (authors, year, title, various other logos)
-  
-          $num_entries++;								                                 //stop dumping entries when we reached the max
-          if ($num_entries == $max_entries) break;
         }
         $ret .= "(:tableend:)\n";
-
-        if ($num_entries == $max_entries) break;					                     //stop dumping entries when we reached the max
     }
     
     return $ret;
