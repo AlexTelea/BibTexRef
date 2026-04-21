@@ -369,7 +369,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')                                   //T
 
 function LoadPrologue($v)                                                            //Adds (at top of page) all code which should appear before any
 {								                     //actual Bib entries are added. So far, this is code for select/sort/etc UI 
-  global $PubDirUrl, $BibMemberAuthorsi, $BibThumbC;                                 //and JS code doing the thumbnail animation. Also sets some global vars
+  global $PubDirUrl, $BibMemberAuthors, $BibThumbC;                                 //and JS code doing the thumbnail animation. Also sets some global vars
 
   $ret = "";							                  
 
@@ -384,10 +384,21 @@ function LoadPrologue($v)                                                       
 
     if (stripos($arg, 'gui') !== false) { $show_gui = true; } 
     else 
-        foreach (explode(',', $arg) as $p) {
+        /*!!foreach (explode(',', $arg) as $p) {
             $p = trim($p, " \t\n\r\0\x0B\"'");
             if ($p !== '') $BibMemberAuthors[] = $p;
+        }*/
+     {
+        $arg = trim($arg);
+        $arg = trim($arg, "[]");
+        $parts = explode(',', $arg);
+        foreach ($parts as $p) {
+          $p = trim($p);          
+          $p = trim($p, "\"' \t\n\r\0\x0B");
+          $p = preg_replace('/\s+/u', ' ', $p);   // normalize weird whitespace
+          if ($p !== '')  $BibMemberAuthors[] = $p;
         }
+     }
   }
 
   if ($show_gui)                                                                    //Add HTML for the UI that sorts/groups/etc the references
@@ -1291,7 +1302,7 @@ class BibtexEntry                                                           //Su
         $RetUrl = preg_replace('/\$Bibfile/', "$Bibfile", $BibtexCompleteEntriesUrl);
         $RetUrl = preg_replace('/\$Entryname/', "$Entryname", $RetUrl);
       }
-      return $RetUrl;
+      return $RetUrl;   
     }
 
     function memberAuthors()                                    //Determines if this Bib entry is authored by one of the people in $BibMemberAuthors
