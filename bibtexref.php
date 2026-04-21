@@ -4,9 +4,9 @@ if (!defined('PmWiki')) exit();
 
 #--- Public API --------------------------------------------------
 
-#Add this before anything else; this initializes the BibTexQuery engine
+#Add this before anything else; this initializes the BibTexQuery engine. The <bibtexquery keyword ensures this is run before bibtexquery is ever used
 #
-Markup('bibinit','directives',"/\\(:\\s*bibinit(?:\\s*\\[(.*?)\\])?(?:\\s*\\[(.*?)\\])?\\s*:\\)/","LoadPrologue");
+Markup('bibinit','<bibtexquery',"/\\(:\\s*bibinit(?:\\s*\\[(.*?)\\])?(?:\\s*\\[(.*?)\\])?\\s*:\\)/","LoadPrologue");
 
 #Shows an editor for the BibTex file given in arg1
 #
@@ -14,7 +14,6 @@ Markup('editbib', 'directives','/\\(:editbib\\s+([^:]+):\\)/',"EditBibForm");
 
 #Select and show Bibtex entries from the file arg1, which match condition in arg2, grouped by arg3, sorted by arg4, capped to max given by arg5
 #
-//!!Markup("bibtexquery","fulltext","/\\bbibtexquery:\\[(.*?)\\]\\[(.*?)\\]\\[(.*?)\\]\\[(.*?)\\]\\[(.*?)\\]/","BibQuery_callback");
 Markup("bibtexquery","fulltext","/\\(:\\s*bibtexquery\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*:\\)/","BibQuery_callback");
 
 #Displays a grid of arg1 random thumbnails picked from those present in the Bibtex database
@@ -384,21 +383,10 @@ function LoadPrologue($v)                                                       
 
     if (stripos($arg, 'gui') !== false) { $show_gui = true; } 
     else 
-        /*!!foreach (explode(',', $arg) as $p) {
+        foreach (explode(',', $arg) as $p) {
             $p = trim($p, " \t\n\r\0\x0B\"'");
             if ($p !== '') $BibMemberAuthors[] = $p;
-        }*/
-     {
-        $arg = trim($arg);
-        $arg = trim($arg, "[]");
-        $parts = explode(',', $arg);
-        foreach ($parts as $p) {
-          $p = trim($p);          
-          $p = trim($p, "\"' \t\n\r\0\x0B");
-          $p = preg_replace('/\s+/u', ' ', $p);   // normalize weird whitespace
-          if ($p !== '')  $BibMemberAuthors[] = $p;
         }
-     }
   }
 
   if ($show_gui)                                                                    //Add HTML for the UI that sorts/groups/etc the references
