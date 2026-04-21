@@ -70,7 +70,7 @@
 #  5. Full parameter details
 #   The parameters of bibtexquery (see above) are as follows: 
 #
-#   file.bib:   
+#   Param 1:   
 #
 #   BibTeX filename to display/edit. Parsed _reasonably_ well; uses MathJax to render math; some issues may happen with non-ASCII characters.
 #
@@ -79,7 +79,7 @@
 #   code:  set this to the URL where code for the paper is available, if any
 #   award: set this to any text yoy want the paper to higghligt as being an award (e.g. "Best paper award conference Bla")
 #
-#   selection_condition:
+#   Param 2:
 #
 #   A PHP expression to evaluate to tell if a Bibtex entry is to be displayed or not. In this expression, $this refers to a BibtexEntry (or subclass) 
 #   instance containing the parsed entry, see bibtexref.php. See below examples of setting selection_condition: 
@@ -87,7 +87,7 @@
 #        this->entrytype=='JOURNAL'                              selects only journal entries   
 #   If selection_condition evaluates to true, the entry is displayed. If this field is empty, it always evaluates true
 #
-#   group_by_expr:
+#   Param 3:
 #
 #   A PHP expression to evaluate to group Bibtex entries. If empty, all entries passing selection_condition are processed w/o grouping.
 #   If not empty, selection_condition is evaluated on each entry. All entries returning the same result (called a key) are called a group. 
@@ -103,18 +103,21 @@
 #   This will duplicate entries which return several keys in group_by_expr. For instance, a paper with authors Smith and Jones will appear in both 
 #   groups which have keys Smith, respectively Jones.
 #
-#   sort_on_expr:   
+#   Param 4:   
 #
 #   A PHP expression to evaluate to sort Bibtex entries. Sorting is done individually in each group (see above).
 #   If this parameter is empty, no sorting is done (entries are displayed in the order they come in the Bibtex file).
 #   If this fiels begins with a "!", descending order is used, else ascending order.
 #   
-#   max_entries:
+#   Param 5:
 #
 #   Total number of Bibtex entries to be displayed. If an entry is displayed multiple times (in different groups), each counts separately. 
 #   Helps limiting the total size of the resulting webpage.
 #
+#   Param 6 (optional):
 #
+#   If this equals 'standard', then all UI options are ignored when selecting BibTeX entries. Useful when e.g. using bibtexentry on some main page
+#   to show the top-few papers with no filters, styles, etc in action. 
  
 
 
