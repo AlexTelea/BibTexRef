@@ -14,7 +14,9 @@ Markup('editbib', 'directives','/\\(:editbib\\s+([^:]+):\\)/',"EditBibForm");
 
 #Select and show Bibtex entries from the file arg1, which match condition in arg2, grouped by arg3, sorted by arg4, capped to max given by arg5
 #
-Markup("bibtexquery","fulltext","/\\(:\\s*bibtexquery\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*:\\)/","BibQuery_callback");
+//!!Markup("bibtexquery","fulltext","/\\(:\\s*bibtexquery\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*:\\)/","BibQuery_callback");
+
+Markup("bibtexquery","fulltext","/\\(:\\s*bibtexquery\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*\\[(.*?)\\](?:\\s*\\[(.*?)\\])?\\s*:\\)/","BibQuery_callback");
 
 #Displays a grid of arg1 random thumbnails picked from those present in the Bibtex database
 #
@@ -894,37 +896,48 @@ $BibtexCodeLink = "code_logo.png";
 $BibtexAwardLink = "award_logo.png";
  
 
-function BibQuery_callback($v)                                  //Generates markup for a (:bibquery:) keyword 
+function BibQuery_callback($v)                                  //Generates markup for (:bibtexquery:) 
 {
   global $BibtexBibDir;
 
+  $lod  = 'Full';
+  $sort = '';
+  $group = '';
+  $keywords = '';
+  $author = ''; 
+  $number = '';
+  $show_charts = 'None';
+
+  $standard = (isset($v[6]) && trim($v[6]) === 'standard');
+
+  $ret = "";
+
+  list($group,$grp_res) = SelectEntries($v[1], $v[2], $v[3], $v[4], $v[5], $standard);            //Select entries to show from the bib file based on selection params
+  if ($grp_res === null)
+       return "%red%Cannot read BibTex file!";
+
+  if ($standard)
+  {
+     $output = AddBibEntries($grp_res, $standard);              //Render selected bib entries into markup
+     return $ret . $output;                                     //Return whatever we got (cached or computed) 
+  }
+
   if (isset($_COOKIE['level_of_detail']))                       //If a level-of-detail was given via the UI, use it
      $lod = $_COOKIE['level_of_detail'];                        //NB: We have 3 caches here, one per level-of-detail
-  else $lod = 'Full';
-
   $number = (isset($_COOKIE['bibtex_number']));   
-
   $sort =  isset($_COOKIE['bibtex_sort']) ? $_COOKIE['bibtex_sort'] : '';
-
   $group =  isset($_COOKIE['bibtex_group']) ? $_COOKIE['bibtex_group'] : '';
+  $keywords = isset($_COOKIE['bibtex_keywords']) ? $_COOKIE['bibtex_keywords'] : '';
+  $author = isset($_COOKIE['bibtex_author'])? $_COOKIE['bibtex_author'] : '';
+  if (isset($_COOKIE['show_charts']))                           //If showing charts was given via the UI, use it
+       $show_charts = $_COOKIE['show_charts'];
+  $keywords = isset($_COOKIE['bibtex_keywords']) ? $_COOKIE['bibtex_keywords'] : '';
+  $author = isset($_COOKIE['bibtex_author'])? $_COOKIE['bibtex_author'] : ''; 
+  
 
   $paramHash = md5("{$v[1]}_{$v[2]}_{$v[3]}_{$v[4]}_{$v[5]}_{$lod}_{$number}_{$sort}_{$group}");  //Do we have a cache for the current page with current params?
 
   $cacheFile = $BibtexBibDir . "/" . "cache_$paramHash.txt";
-
-  $keywords = isset($_COOKIE['bibtex_keywords']) ? $_COOKIE['bibtex_keywords'] : "";
-  $author = isset($_COOKIE['bibtex_author'])? $_COOKIE['bibtex_author'] : ""; 
-
-  $ret = "";
- 
-  list($group,$grp_res) = SelectEntries($v[1], $v[2], $v[3], $v[4], $v[5]);            //Select entries to show from the bib file based on selection params
-  if ($grp_res === null)
-       return "%red%Cannot read BibTex file!";
-
-                                                             //1. Add charts (if any asked for); we don't cache these since too many options
-  if (isset($_COOKIE['show_charts']))                        //If showing charts was given via the UI, use it
-       $show_charts = $_COOKIE['show_charts'];
-  else $show_charts = 'None';
 
   if ($show_charts != 'None')
   {
@@ -945,7 +958,7 @@ function BibQuery_callback($v)                                  //Generates mark
      if (file_exists($cacheFile))                             //Is there a valid cache? Then return its contents, we are done
        return $ret . file_get_contents($cacheFile);
 
-  $output = AddBibEntries($grp_res);                          //Render selected bib entries into markup 
+  $output = AddBibEntries($grp_res, $standard);               //Render selected bib entries into markup 
   
   if ($keywords == "" && $author == "")                       //Don't cache if we had specific author/keyword queries; we only cache general things
      file_put_contents($cacheFile, $output);                  //Cache that query result (mix of markup and HTML) for further use
@@ -2140,7 +2153,7 @@ function printableSelector($php_expr)                                           
 }
 
 
-function SelectEntries($file, $cond, $group, $sort, $max)                                //Select bib entries from $file given criteria; return selected/grouped results 
+function SelectEntries($file, $cond, $group, $sort, $max, $standard)                            //Select bib entries from $file given criteria; return selected/grouped results 
 {
     global $BibEntries;
 
@@ -2159,13 +2172,13 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
 
     if ($cond == '') $cond = 'true';                                                            //1. Process condition (filter):
 
-    if (isset($_COOKIE['bibtex_author']))                                                       //If sorting criterion given via the UI,
+    if (!$standard && isset($_COOKIE['bibtex_author']))                                         //If sorting criterion given via the UI,
     {                                                                                           //make it override the one given by bibquery:
        $user_author = $_COOKIE['bibtex_author'];
        $cond = $cond . " && stripos(\$this->get('AUTHOR'),'$user_author')!==false";
     }
 
-    if (isset($_COOKIE['bibtex_keywords']))                                                     //If keywords given via the UI,
+    if (!$standard && isset($_COOKIE['bibtex_keywords']))                                       //If keywords given via the UI,
     {                                                                                           //add them to the filter
        $user_keywords = $_COOKIE['bibtex_keywords'];
        $cond = $cond . " && stripos(\$this->get('KEYWORDS'),'$user_keywords')!==false";
@@ -2175,7 +2188,7 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
         if (evalExpr($cond,$value)) $res[] = $value;
 
                                                                                                 //2. Process sorting criterion
-    if (isset($_COOKIE['bibtex_sort']))                                                         //If sorting criterion given via the UI,
+    if (!$standard && isset($_COOKIE['bibtex_sort']))                                           //If sorting criterion given via the UI,
     {                                                                                           //make this override the one in (:bibquery:)
        $user_sort = $_COOKIE['bibtex_sort'];
        if ($user_sort == 'sort_author')
@@ -2195,7 +2208,7 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
 
     $capitalize = false;                                                                        //Only capitalize some fields (not author names or years in any case)
 
-    if (isset($_COOKIE['bibtex_group']))                                                        //If grouping criterion given via the UI,
+    if (!$standard && isset($_COOKIE['bibtex_group']))                                          //If grouping criterion given via the UI,
     {                                                                                           //make this override the one in (:bibquery:)
        $user_group = $_COOKIE['bibtex_group'];
        if ($user_group == 'group_type')
@@ -2278,15 +2291,15 @@ function SelectEntries($file, $cond, $group, $sort, $max)                       
 }
 
 
-function AddBibEntries($grp_res)                                                                //Generates markup to show entries selected/grouped in $grp_res
+function AddBibEntries($grp_res, $standard)                                                     //Generates markup to show entries selected/grouped in $grp_res
 {
     $ret = "";                                                                                  //Start adding the webpage's content
 
     $tot_entries = array_sum(array_map('count', $grp_res));                                     //Count the total #entries we will display
                  
-    $add_numbers = (isset($_COOKIE['bibtex_number']));                                          //See if we want to number the entries (decreasingly)
+    $add_numbers = (!$standard && isset($_COOKIE['bibtex_number']));                            //See if we want to number the entries (decreasingly)
                  
-    if (isset($_COOKIE['level_of_detail']))                                                     //If a level-of-detail was given via the UI, use it
+    if (!$standard && isset($_COOKIE['level_of_detail']))                                        //If a level-of-detail was given via the UI, use it
        $lod = $_COOKIE['level_of_detail'];
     else $lod = 'Full';
 
