@@ -949,8 +949,10 @@ function BibQuery_callback($v)                                  //Generates mark
       }
       if (!empty($groupCounts))                               //Add code to create charts; done via the (:bibchart:) markup
       {
+        $ret .= "<div class='bib-chart'>\n";
         $ret .= "!!Papers per " . printableSelector($group) . "\n";
-        $ret .= '(:bibchart ' . json_encode($groupCounts) . ':)' . " \n";
+        $ret .= '(:bibchart ' . json_encode($groupCounts) . ':)' . "\n";
+        $ret .= "</div>\n";
       }
   }
                                                                //2. Render the selected entries (either from cache or else computed next)
