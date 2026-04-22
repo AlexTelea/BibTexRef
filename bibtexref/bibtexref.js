@@ -83,8 +83,8 @@ function drawBarChart(containerId, inputData)
      .style('pointer-events', 'bounding-box')
      .on('mouseover', function(event, d) { tooltip .style('opacity', 1) .text(`${decodeEntities(d.label)}: ${d.count}`); })
      .on('mousemove', function(event) { tooltip .style('left', (event.pageX + 10) + 'px') .style('top', (event.pageY + 10) + 'px'); })
-     .on('mouseout', function() { tooltip.style('opacity', 0); });
-
+     .on('mouseout', function() { tooltip.style('opacity', 0); })
+     .on('click', function(event, d) { window.location.hash = d.label; });
  
   const xAxis = svg.append('g')                                     // X axis legend
      .attr('transform', 'translate(0,' + (height - margin.bottom) + ')')
