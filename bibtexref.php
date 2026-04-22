@@ -2137,21 +2137,28 @@ function BibChart_callback($v)                                          //Genera
 }
 
 
-function printableSelector($php_expr)                                                        //Makes a human-readable expression from a PHP expression that is 
-{                                                                                            //used as one of the args of (: bibtexquery :). Typical args for this
-    $php_expr = html_entity_decode($php_expr);                                               //are of the form $this->fieldname or $this->get('keyname').
-    $ret = '';                                                                               //We want to return simply fieldname or keyname.
-    if (preg_match('/\\$this->get\\([\'"]([^\'"]+)[\'"]\\)/', $php_expr, $m)) {              //Used to show in the webpage what the selection actually used.  
-        $ret = $m[1];
-    }
-    else
-    if (preg_match('/\\$this->([a-zA-Z0-9_]+)/', $php_expr, $m)) {
-        $ret = $m[1];
-    }
-    
-    return ucfirst(strtolower(str_replace('_',' ',$ret)));
-}
+function printableSelector($php_expr)                                                      //Makes a human-readable expression from a PHP expression that is 
+{                                                                                          //used as one of the args of (: bibtexquery :). Typical args for this
+    $php_expr = html_entity_decode($php_expr);                                             //are like $this->fieldname, $this->get('keyname'), or $this->someFuncName().
+    $ret = '';                                                                             //Used to show in the webpage what the selection actually used.
 
+    if (preg_match('/\$this->get\(\s*[\'"]([^\'"]+)[\'"]\s*\)/', $php_expr, $m)) {
+        $ret = $m[1];
+    }
+    elseif (preg_match('/\$this->([a-zA-Z0-9_]+)/', $php_expr, $m)) {
+        $ret = $m[1];   // works for both field AND funcName()
+    }
+
+    if ($ret === '') {
+        return 'Unknown';
+    }
+
+    $ret = str_replace('_', ' ', $ret);
+    $ret = preg_replace('/([a-z])([A-Z])/', '$1 $2', $ret);
+    $ret = strtolower($ret);
+
+    return ucfirst($ret);
+}
 
 function SelectEntries($file, $cond, $group, $sort, $max, $standard)                            //Select bib entries from $file given criteria; return selected/grouped results 
 {
