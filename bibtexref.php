@@ -926,7 +926,7 @@ function BibQuery_callback($v)                                  //Generates mark
      $lod = $_COOKIE['level_of_detail'];                        //NB: We have 3 caches here, one per level-of-detail
   $number = (isset($_COOKIE['bibtex_number']));   
   $sort =  isset($_COOKIE['bibtex_sort']) ? $_COOKIE['bibtex_sort'] : '';
-  $group =  isset($_COOKIE['bibtex_group']) ? $_COOKIE['bibtex_group'] : '';
+  $group_by =  isset($_COOKIE['bibtex_group']) ? $_COOKIE['bibtex_group'] : '';
   $keywords = isset($_COOKIE['bibtex_keywords']) ? $_COOKIE['bibtex_keywords'] : '';
   $author = isset($_COOKIE['bibtex_author'])? $_COOKIE['bibtex_author'] : '';
   if (isset($_COOKIE['show_charts']))                           //If showing charts was given via the UI, use it
@@ -935,7 +935,7 @@ function BibQuery_callback($v)                                  //Generates mark
   $author = isset($_COOKIE['bibtex_author'])? $_COOKIE['bibtex_author'] : ''; 
   
 
-  $paramHash = md5("{$v[1]}_{$v[2]}_{$v[3]}_{$v[4]}_{$v[5]}_{$lod}_{$number}_{$sort}_{$group}");  //Do we have a cache for the current page with current params?
+  $paramHash = md5("{$v[1]}_{$v[2]}_{$v[3]}_{$v[4]}_{$v[5]}_{$lod}_{$number}_{$sort}_{$group_by}");  //Do we have a cache for the current page with current params?
 
   $cacheFile = $BibtexBibDir . "/" . "cache_$paramHash.txt";
 
