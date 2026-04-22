@@ -102,5 +102,12 @@
   opacity: 1;
 }
 
+#bibtex-stats-chart {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1000;
+}
+
 
 
