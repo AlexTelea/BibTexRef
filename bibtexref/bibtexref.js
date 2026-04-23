@@ -3,11 +3,31 @@
 //
 
 
+let   scrollHandler = null;
+const BAR_COLOR = 'rgb(32,66,119)';
+const BAR_HIGHLIGHT = 'orange';
+
 function decodeEntities(str)                                       //Needed to map JSON text to proper-formatted HTML 
 {							           //(if including accents etc)
   const txt = document.createElement('textarea');
   txt.innerHTML = str;
   return txt.value;
+}
+
+
+function handleScrollSync(bars)                                    //Callback that highlights the chart bar corresponding to where 
+{                                                                  //we're scrolled in the webpage
+    const sections = document.querySelectorAll('h1[id], h2[id]');
+
+    let activeId = null;
+    let maxTop = -Infinity;
+
+    sections.forEach(sec => {
+       const rect = sec.getBoundingClientRect();
+       if (rect.top <= window.innerHeight * 0.5 && rect.top > maxTop) { maxTop = rect.top; activeId = sec.id; }
+    });
+
+    bars.attr('fill', d => d.label === activeId? BAR_HIGHLIGHT : BAR_COLOR);
 }
 
 
@@ -71,7 +91,7 @@ function drawBarChart(containerId, inputData)
                 .attr('width', containerWidth)
                 .attr('height', height);
   
-  svg.selectAll('rect')
+  const bars = svg.selectAll('rect')
      .data(data)
      .enter()
      .append('rect')
@@ -79,7 +99,8 @@ function drawBarChart(containerId, inputData)
      .attr('width', barWidth)
      .attr('y', d => { const h = Math.max(minBarHeight, y(0) - y(d.count)); return y(0) - h; })
      .attr('height', d => { return Math.max(minBarHeight, y(0) - y(d.count)); })
-     .attr('fill', 'rgb(32,66,119)')
+     .attr('fill', BAR_COLOR)
+     .attr('data-label', d => d.label) 
      .style('pointer-events', 'all')
      .on('mouseover', function(event, d) { tooltip .style('opacity', 1) .text(`${decodeEntities(d.label)}: ${d.count}`); })
      .on('mousemove', function(event) { tooltip .style('left', (event.pageX + 10) + 'px') .style('top', (event.pageY + 10) + 'px'); })
@@ -123,7 +144,12 @@ function drawBarChart(containerId, inputData)
    .style('font-weight', computedStyle.fontWeight)
    .style('fill', '#757575')   
    .text(`Total: ${total}`);
+
+  scrollHandler = function() { handleScrollSync(bars); };           // Add callback for highlighting chart bars based on where we're scrolled
+  window.removeEventListener('scroll', scrollHandler);
+  window.addEventListener('scroll', scrollHandler);
 }
+
 
 function startRandomGallery(containerId, imageList, count, interval = 3000)
 {
