@@ -2314,8 +2314,12 @@ function AddBibEntries($grp_res, $standard)                                     
 
     foreach ($grp_res as $key => $entries)                                                      //Add Bib entries for all groups
     {
-        if ($key!="") $ret .= "<h1 id='{$key}'>{$key}</h1>\n"; 
-        
+        if ($key!="") 
+        {
+          $id = preg_replace('/[^a-zA-Z0-9_-]/', '', $key);
+          $ret .= "<h1 id='{$id}'>{$key}</h1>\n"; 
+        }
+
         $ret .= "(:table cellspacing=0 bgcolor=#efefef :) " . "\n";   		                //Then add all group entries in a table
         foreach($entries as $value)
         {
