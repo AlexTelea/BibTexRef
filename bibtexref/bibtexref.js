@@ -28,6 +28,8 @@ function handleScrollSync(bars)                                    //Callback th
     });
 
     bars.attr('fill', d => d.label === activeId? BAR_HIGHLIGHT : BAR_COLOR);
+
+    bars.filter(d => d.label === activeId) .raise();
 }
 
 
