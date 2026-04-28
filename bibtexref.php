@@ -1353,6 +1353,13 @@ class BibtexEntry                                                           //Su
   }
 
 
+  function isLocalUrl($url)                                           //Checks that a URL is local to this server 
+  {
+    global $RootPrefix;
+    return strpos($url, $RootPrefix) === 0 || strpos($url, '/') === 0 || !preg_match('#^https?://#', $url);
+  }
+
+
   function getPostString($dourl = true)                               //Called after getPreString. Generates markup to add the URL, PDF, DOI, and BibTeX fields.
   {                                                                   //As for getPreString, these are generic entries which don't depend on the Bib entry's type
 
@@ -1375,14 +1382,23 @@ class BibtexEntry                                                           //Su
       else
       {
         $pdf = $this->get("PDF");
-        if ($pdf)                                                                     //2. if Bibtex provided a PDF field:
-        {      
-             if (strpos($pdf, $RootPrefix) === 0)                                     //PDF field is file: strip prefix since not needed for web serving 
-                $pdf = substr($pdf, strlen($RootPrefix));                            
-             else                                                                     //PDF field is absolute URL: Hack: This code is needed since, in getSolePageEntry(), MarkupToHTML()
-                $pdf = str_replace(":", "&#58;", $pdf);                               //will else screw up absolute "https://..etc" text (by its regex), aiming to 'fix' it as it thinks 
-             
-             $ret .= xKeep("<a href='" . $pdf . "'> $pdfThumb</a>");
+        if ($pdf) 
+        {
+           if ($this->isLocalUrl($pdf))                                               //Is the PDF URL local to this server? Then check its target file does exist. 
+           {                                                                          //If not, don't show the PDF icon since we have clearly nothing to serve for it.
+              $ctx = stream_context_create(['http' => ['method' => 'HEAD', 'timeout' => 2]]);
+              $headers = @get_headers($pdf, 1, $ctx);
+              if ($headers && isset($headers[0]) && strpos($headers[0], '200') !== false)
+              {
+                $pdf_safe = str_replace(":", "&#58;", $pdf);                          //PDF field is absolute URL: Hack: This code is needed since, in getSolePageEntry(), MarkupToHTML()
+                $ret .= xKeep("<a href='$pdf_safe'> $pdfThumb</a>");                  //will else screw up absolute "https://..etc" text (by its regex), aiming to 'fix' it as it thinks 
+              }
+           }
+           else                                                                       //Is the PDF URL outside of this server? Don't check since we cannot infer anything from such a check 
+           {
+               $pdf_safe = str_replace(":", "&#58;", $pdf);                           //Same hack fix as above
+               $ret .= xKeep("<a href='" . $pdf_safe . "'> $pdfThumb</a>");
+           }
         }
       }
       
