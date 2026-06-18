@@ -2321,7 +2321,9 @@ function AddBibEntries($grp_res, $standard)                                     
     $ret = "";                                                                                  //Start adding the webpage's content
 
     $tot_entries = array_sum(array_map('count', $grp_res));                                     //Count the total #entries we will display
-                 
+                
+    $num_entries = 0;
+ 
     $add_numbers = (!$standard && isset($_COOKIE['bibtex_number']));                            //See if we want to number the entries (decreasingly)
                  
     if (!$standard && isset($_COOKIE['level_of_detail']))                                        //If a level-of-detail was given via the UI, use it
@@ -2348,6 +2350,8 @@ function AddBibEntries($grp_res, $standard)                                     
           else $ret .= "(:cellnr:) ";
                  
           if ($add_numbers) $ret .= "'''". $tot_entries - $num_entries. "'''. ";         //If we want to number entries: do that
+
+          $num_entries++;
 
           $ret .= $value->getRichSummary(true,$lod) . "\n";                              //second cell: summary (authors, year, title, various other logos)
         }
