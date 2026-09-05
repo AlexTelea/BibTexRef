@@ -2119,6 +2119,8 @@ function makeThumb($value)
         $thumb_code = "<div id='$thumb_container_name' class='bib-thumb-c' data-images='$thumb_images'> <img id ='$thumb_name' class='bibtex-img-thumb-cont' src='$imageUrl' loading='lazy'/></div>"; 
                                                                         //Create the container and the thumbnail inside it
 
+        $thumbnail = "";
+
         if ($result_link)                                               //Did we get some valid link for the thumbnail at all? Then use it; else, just show the thumbnail
         {                                                               //This makes clicking on the container follow $result_link
             if (strpos($result_link, $RootPrefix) === 0)
@@ -2349,7 +2351,7 @@ function AddBibEntries($grp_res, $standard)                                     
           }
           else $ret .= "(:cellnr:) ";
                  
-          if ($add_numbers) $ret .= "'''". $tot_entries - $num_entries. "'''. ";         //If we want to number entries: do that
+          if ($add_numbers) $ret .= "'''". ($tot_entries - $num_entries) . "'''. ";         //If we want to number entries: do that
 
           $num_entries++;
 
