@@ -1,6 +1,8 @@
 <?php
 
+
 if (!defined('PmWiki')) exit();
+
 
 #--- Public API --------------------------------------------------
 
@@ -25,7 +27,6 @@ Markup('bibthumbsgallery', 'directives', '/\\(:bibthumbsgallery\\s+([^:]+):\\)/'
 #Displays a D3 chart with some stats about the papers selected by BibQuery
 #
 Markup('bibchart', 'directives', '/\(:bibchart\s*(.*?)\s*:\)/', "BibChart_callback");
-
 
 
 
@@ -268,8 +269,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')                                   //T
             unlink($file);
          //!!possibly add code to delete all _raw_image temp files
 
+
          $processed_log = $qual_thumbs_dir . "/processed.log";
          unlink($processed_log);
+
 
          PDFToThumbnails::computeThumbnails($pdf, $key, $BibtexBibDir, 10); 
          touch($processed_log);
@@ -374,7 +377,7 @@ function LoadPrologue($v)                                                       
 
   $ret = "";							                  
 
-  $args = [trim($v[1] ?? ''), trim($v[2] ?? '')];                                    //Parse optional arguments
+  $args = [trim(isset($v[1]) ? $v[1] : ''), trim(isset($v[2]) ? $v[2] : '')];       //Parse optional arguments
 
   $show_gui = false;
   $BibMemberAuthors = [];
@@ -481,7 +484,7 @@ function LoadPrologue($v)                                                       
             });
         });
       </script>
-  EOT;
+EOT;
      
   return $ret;
 }
@@ -539,19 +542,13 @@ function find_thumb_images($base)                              // Find a subset 
       if (!empty($fallbacks))                                  // (since likely also the most information-rich...)
        {
           usort($fallbacks, function($a, $b) { return filesize($b) - filesize($a); });
-          $result[] = $fallbacks[0];
+          array_push($result, $fallbacks[0]);
        }
     }
   }
 
   return $result;
 }
-
-
-
-
-
-
 
 function GenerateThumbdirButtons($bibfile) 
 {
@@ -578,9 +575,9 @@ function GenerateThumbdirButtons($bibfile)
        
         if ($bibentry)
         { 
-            $html .= "<td style='padding: 1px; text-align: center;'>
-                        <button type='submit' name='selectedDir' value='$dirName' style='width: 100%;  padding: 0px; margin: 1px; cursor: pointer;'> $dirLabel </button>
-                      </td>";
+          $html .= "<td style='padding: 1px; text-align: center;'>
+                <button type='submit' name='selectedDir' value='" . $dirName . "' style='width: 100%;  padding: 0px; margin: 1px; cursor: pointer;'> " . $dirLabel . " </button>
+              </td>"; 
         }
         else                                                   // If not, delete the thumbs-dir since very likely just something stale from the past..
         {   //!!For now, this is blocked since if we e.g. have a parsing error in Bibtex, this'll erase all cached thumb-dirs...
@@ -613,8 +610,11 @@ function HandleManageBib($pagename, $auth)
 
 
     $page = RetrieveAuthPage($pagename, 'read', true);          //We next retrieve the wiki code of this page. 
-    if (!$page) Abort("Cannot read page $pagename");            //We manually search it for the (:managebib xxx:) string
+    if (!$page) Abort("Cannot read page " . $pagename);            //We manually search it for the (:managebib xxx:) string
                                                                 //and parse this string to extract the name 'xxx' of the Bibtex file
+    
+
+
     $text = @$page['text'];                                     //This works since we've taken over, via this handler, the entire
                                                                 //generation of the HTML page. 
     $bibfile = '';
@@ -790,14 +790,23 @@ function HandleEditBib($pagename, $auth)                        #When a page is 
 
     global $Action;                                             #If user can edit, show next the editor via (:editbib:)
     $Action = 'editbib';
+
+
+
     HandleBrowse($pagename);                                    #Display the current page again - we got the auth, so, just refresh the screen so to speak. But add "?action=editbib" so EditBibForm is called next
+
+
 }
 
 
 function EditBibForm($v)                                        #What (:editbib:) should actually expand do
 {                                                               #v[] is an array of the type argv[] containing the arguments of (:editbib:)
+
+
+
     global $Bibtex_goback, $BibtexBibDir, $BibtexBibUrl, $PubDirUrl;
-    
+  
+ 
     $filename = trim($v[1]);                                    #Get the (:editbib:) argument telling the file we want to edit, trimming spaces
    
     $key = $_GET['key'];					#See if we invoked the editor with a specific Bibtex-entry in mind to edit
@@ -900,6 +909,7 @@ function BibQuery_callback($v)                                  //Generates mark
 {
   global $BibtexBibDir;
 
+
   $lod  = 'Full';
   $sort = '';
   $group = '';
@@ -913,6 +923,7 @@ function BibQuery_callback($v)                                  //Generates mark
   $ret = "";
 
   list($group,$grp_res) = SelectEntries($v[1], $v[2], $v[3], $v[4], $v[5], $standard);            //Select entries to show from the bib file based on selection params
+  
   if ($grp_res === null)
        return "%red%Cannot read BibTex file!";
 
@@ -921,6 +932,7 @@ function BibQuery_callback($v)                                  //Generates mark
      $output = AddBibEntries($grp_res, $standard);              //Render selected bib entries into markup
      return $ret . $output;                                     //Return whatever we got (cached or computed) 
   }
+
 
   if (isset($_COOKIE['level_of_detail']))                       //If a level-of-detail was given via the UI, use it
      $lod = $_COOKIE['level_of_detail'];                        //NB: We have 3 caches here, one per level-of-detail
@@ -955,13 +967,16 @@ function BibQuery_callback($v)                                  //Generates mark
         $ret .= "</div>\n";
       }
   }
-                                                               //2. Render the selected entries (either from cache or else computed next)
+  
+
+                                                             //2. Render the selected entries (either from cache or else computed next)
   if ($keywords == "" && $author == "")                       //Specific queries on authors/keywords: We don't have a cache for that..
      if (file_exists($cacheFile))                             //Is there a valid cache? Then return its contents, we are done
        return $ret . file_get_contents($cacheFile);
 
+
   $output = AddBibEntries($grp_res, $standard);               //Render selected bib entries into markup 
-  
+ 
   if ($keywords == "" && $author == "")                       //Don't cache if we had specific author/keyword queries; we only cache general things
      file_put_contents($cacheFile, $output);                  //Cache that query result (mix of markup and HTML) for further use
 
@@ -1126,7 +1141,7 @@ function name_fmt($name, $name_abbrev)
    
 
 
-function evalExpr(string $expr, object $context)                            //Evaluates a PHP expression that is given as part of (:bibtexentry:) args to select, group, sort etc entries 
+function evalExpr($expr, $context)                            //Evaluates a PHP expression that is given as part of (:bibtexentry:) args to select, group, sort etc entries 
 {                                                                           //$expr can contain $this which refers to the object $context.
     $expr = html_entity_decode($expr, ENT_QUOTES);                          //We use this helper func to ensure (as much as possible) that no unsafe PHP code can be executed
     $fn = function() use ($expr) 
@@ -1518,8 +1533,7 @@ class BibtexEntry                                                           //Su
       if (count($this->keywords))
       {
             $ret .= "\n!!!Keywords\n";
-
-            $ret .= implode(", ", array_map(fn($x) => "%bgcolor=silver% " . $x . "%%", $this->keywords)) . "\n";
+            $ret .= implode(", ", array_map(function($x) { return "%bgcolor=silver% " . $x . "%%"; }, $this->keywords)) . "\n";
       }
         
       $comment = $this->getComment();
@@ -2039,17 +2053,22 @@ function makeThumb($value)
         $img_files = [];                                                //Collects names of all thumbnails for this entry
 
         $thumbs_dir = $BibtexBibDir . "/" . $value->entryname . "_thumbs";
+        
         if (!is_dir($thumbs_dir))                                       //1. Make in any case the _thumbs dir if not existing
           mkdir($thumbs_dir,0775);
 
         $processed_log = $thumbs_dir . "/processed.log";
 
+
         if (!file_exists($processed_log))                               //2. See if we already ran the PDF extractor. If not, run it now
         {
           $pdf_file = $value->getPDF();                                 //Get PDF (either local or via PDF field in Bib record) 
+          
           if ($pdf_file)                                                //If we got any PDF, extract max 10 thumbnails from it into the thumbs dir
-                                                                        //This is slow if not already done
-             PDFToThumbnails::computeThumbnails($pdf_file, $value->entryname, $BibtexBibDir, 10);
+          {                                                              //This is slow if not already done
+            PDFToThumbnails::computeThumbnails($pdf_file, $value->entryname, $BibtexBibDir, 10);
+          } 
+
           touch($processed_log);                                        //Mark thios thumbs dir as already processed (from its PDF)
         }
 
@@ -2112,7 +2131,8 @@ function makeThumb($value)
 
         $thumb_container_name = "thumbC-" . $value->entryname;   //We'll create a div container to store a 'data-images' attribute with names of all thumbnails
 
-        $thumb_images = implode(',', array_map(fn($img) => $BibtexBibUrlShort . "/". $img, $img_files));
+      
+        $thumb_images = implode(',', array_map(function($img) use ($BibtexBibUrlShort) { return $BibtexBibUrlShort . "/" . $img; }, $img_files));
                                                                         //Collect names of all thumb-imgs for this to pass them to JS for thumbnail animation
         $thumb_name = "thumbnail-" . $value->entryname;                 //HTML ID for the actual thumbnail
 
@@ -2259,7 +2279,7 @@ function SelectEntries($file, $cond, $group, $sort, $max, $standard)            
     foreach ($res as $element)                                                                  //If no criterion, group them under a dummy key
     {
       $key = ($group!='')? evalExpr($group,$element) : "";                                      //Criterion to evaluate (if any)
-      $key = $key ?? "";                                                                        //Traps cases where the criterion evaluates to NULL
+      $key =  isset($key) ? $key : "";                                                          //Traps cases where the criterion evaluates to NULL
                                                                                                 //Evaluating the criterion can return a single value (e.g. year) or an array (e.g. author names)
 
       if (is_array($key))                                                                       //If we have an array, simply
@@ -2351,7 +2371,7 @@ function AddBibEntries($grp_res, $standard)                                     
           }
           else $ret .= "(:cellnr:) ";
                  
-          if ($add_numbers) $ret .= "'''". ($tot_entries - $num_entries) . "'''. ";         //If we want to number entries: do that
+          if ($add_numbers) $ret .= "'''". ($tot_entries - $num_entries). "'''. ";         //If we want to number entries: do that
 
           $num_entries++;
 
@@ -2612,6 +2632,7 @@ function ReadBibFile($bib_file)                                                 
         return false;
     }
 }
+
 
 
 
