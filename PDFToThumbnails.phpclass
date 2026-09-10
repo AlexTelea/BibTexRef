@@ -36,6 +36,10 @@ try {
         }                                                   //!!Better: delete most-recent image file in _thumbs since potentially corrupted
     });
 
+    if (version_compare(PHP_VERSION, '7.0', '<'))           //Workaround: old PHP versions often come with a broken SSL stack that cannot read modern certs
+							    //So we disable cert-checking (safe, we're getting just some PDF's here) 
+       stream_context_set_default(array('ssl' => array('verify_peer' => false,'verify_peer_name' => false)));
+
     $pdf->Load($pdf_file);    // Run the PDF extraction; this is the function that may fail
     return true;              // If we arrived here, Load() executed OK
   } 
