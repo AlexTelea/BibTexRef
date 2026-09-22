@@ -402,7 +402,9 @@ function LoadPrologue($v)                                                       
 
     $html .= "<span style='margin: 0; padding-right: 5px'><strong>Sort</strong></span>
              <form method='post'>
-             <select name='sort_action' onchange='this.form.submit()'>";
+             <select name='sort_action' 
+                title='How to sort papers within a group (see Group button)'
+                onchange='this.form.submit()'>";
 
     $sortButtons = [ 'default' => '', 'author' => 'sort_author', 'type' => 'sort_type', 'year' => 'sort_year' ];
     foreach ($sortButtons as $buttonText => $action) 
@@ -419,7 +421,9 @@ function LoadPrologue($v)                                                       
 
     $html = "<span style='margin: 0; padding-left: 5px; padding-right: 5px'><strong>Group</strong></span>
              <form method='post'>
-             <select name='group_action' onchange='this.form.submit()'>";
+             <select name='group_action' 
+               title='Group papers by equal values of the selected attribute' 
+               onchange='this.form.submit()'>";
     
     $groupButtons = [ 'default' => '', 'author' => 'group_author', 'type' => 'group_type', 'year' => 'group_year' ];
 
@@ -440,14 +444,18 @@ function LoadPrologue($v)                                                       
  
     $ret .= Keep("<span style='margin: 0; padding-left: 5px; padding-right: 5px'><strong>Author</strong></span>
                   <form method='post' action='?action=search_author'>
-                    <input type='text' name='search_author' placeholder = 'Select' value='$currentAuthor' style='width: 60px;'/>
+                    <input type='text' name='search_author' placeholder = 'Select' value='$currentAuthor' 
+                      title='Enter an author name (or substring thereof) or !award to show awarded papers' 
+                      style='width: 60px;'/>
                   </form>") . "\n";
 
     $currentKeyword = isset($_COOKIE['bibtex_keywords']) ? $_COOKIE['bibtex_keywords'] : ''; //Add HTML to select by keywords; show currently-set keyword if any
 
     $ret .= Keep("<span style='margin: 0; padding-left: 5px; padding-right: 5px'><strong>Keyword</strong></span>
                   <form method='post' action='?action=search_keywords'>
-                    <input type='text' name='search_keywords' placeholder = 'Select' value='$currentKeyword' style='width: 60px;'/>
+                    <input type='text' name='search_keywords' placeholder = 'Select' value='$currentKeyword' 
+                      title='Enter a keyword (or substring thereof) or !award to show awarded papers'
+                      style='width: 60px;'/>
                   </form>") . "\n"; 
 
     $currentLOD = isset($_COOKIE['level_of_detail']) ? $_COOKIE['level_of_detail'] : 'Full'; //Add HTML to change level of detail; show currently-set LOD if any
@@ -455,20 +463,20 @@ function LoadPrologue($v)                                                       
     $ret .= Keep("<span style='margin: 0; padding-left: 5px; padding-right: 5px'><strong>Detail</strong></span>
                   <form method='post' action='?action=level_of_detail'>
                     <input type='hidden' name='level_of_detail' value='level_of_detail'>
-                  <button type='submit'> $currentLOD </button> </form>") . "\n"; 
+                  <button type='submit' title='How much detail to show for a paper'> $currentLOD </button> </form>") . "\n"; 
 
     $currentCharts = isset($_COOKIE['show_charts']) ? $_COOKIE['show_charts'] : 'None';      //Add HTML to show the chart-selecting option; show currently-set chart option of any
     $ret .= Keep("<span style='margin: 0; padding-left: 5px; padding-right: 5px'><strong>Stats</strong></span>
                   <form method='post' action='?action=show_charts'>
                     <input type='hidden' name='show_charts' value='show_charts'>
-                  <button type='submit'> $currentCharts </button> </form>") . "\n";
+                  <button type='submit' title='Show various statistics on the displayed papers'> $currentCharts </button> </form>") . "\n";
 
     $highlightStyle = isset($_COOKIE['bibtex_number']) ? "style='font-weight: bold;'" : "";  //Add HTML to set/reset reference numbering; show currently-set value if any
                
     $ret .= Keep("<p style='margin: 0; padding-left: 5px'></p>
                   <form method='post' action='?action=number_entries'>
                    <input type='hidden' name='number_entries' value='number_entries'>
-                  <button type='submit' $highlightStyle> &#35; </button> </form>") . "\n";
+                  <button type='submit' title='Show/hide paper numbers' $highlightStyle> &#35; </button> </form>") . "\n";
                
     $ret .= Keep("</div> ") ."\n";				                //Finish adding buttons
   }
