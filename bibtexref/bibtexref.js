@@ -190,8 +190,6 @@ function startRandomGallery(containerId, imageList, count, interval = 3000)
 
 function cycleImages(thumbnailId)                       //Callback for mouse entering thumbnail: starts anim
 {
-            console.log("cycleImages called with ID:", thumbnailId);
-
             var container = document.getElementById('thumbC-' + thumbnailId);
             var imgElement = document.getElementById('thumbnail-' + thumbnailId);
             var images = container.getAttribute('data-images').split(',');
