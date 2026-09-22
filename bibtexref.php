@@ -943,9 +943,6 @@ function BibQuery_callback($v)                                  //Generates mark
   $author = isset($_COOKIE['bibtex_author'])? $_COOKIE['bibtex_author'] : '';
   if (isset($_COOKIE['show_charts']))                           //If showing charts was given via the UI, use it
        $show_charts = $_COOKIE['show_charts'];
-  $keywords = isset($_COOKIE['bibtex_keywords']) ? $_COOKIE['bibtex_keywords'] : '';
-  $author = isset($_COOKIE['bibtex_author'])? $_COOKIE['bibtex_author'] : ''; 
-  
 
   $paramHash = md5("{$v[1]}_{$v[2]}_{$v[3]}_{$v[4]}_{$v[5]}_{$lod}_{$number}_{$sort}_{$group_by}");  //Do we have a cache for the current page with current params?
 
@@ -2222,13 +2219,19 @@ function SelectEntries($file, $cond, $group, $sort, $max, $standard)            
     if (!$standard && isset($_COOKIE['bibtex_author']))                                         //If sorting criterion given via the UI,
     {                                                                                           //make it override the one given by bibquery:
        $user_author = $_COOKIE['bibtex_author'];
-       $cond = $cond . " && stripos(\$this->get('AUTHOR'),'$user_author')!==false";
+       if ($user_author === '!award')
+         $cond = $cond . " && \$this->get('AWARD')!==''";
+       else 
+         $cond = $cond . " && stripos(\$this->get('AUTHOR'),'$user_author')!==false";
     }
 
     if (!$standard && isset($_COOKIE['bibtex_keywords']))                                       //If keywords given via the UI,
     {                                                                                           //add them to the filter
        $user_keywords = $_COOKIE['bibtex_keywords'];
-       $cond = $cond . " && stripos(\$this->get('KEYWORDS'),'$user_keywords')!==false";
+       if ($user_keywords === '!award') 
+         $cond = $cond . " && \$this->get('AWARD')!==''";
+       else
+         $cond = $cond . " && stripos(\$this->get('KEYWORDS'),'$user_keywords')!==false";
     }
 
     foreach ($bibentries as $key => $value)                                                     //Select entries matching 'cond'
