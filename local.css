@@ -42,9 +42,11 @@
 
 .bibtex-editor 
 {
-            width: 100%;            /* Make it take full width */
-            height: 400px;          /* Set a fixed height */
-            font-family: monospace; /* Makes it easier to edit code */
+    width: 100%;
+    height: 400px;
+    font-family: monospace;
+    overflow: auto;
+    border: 1px solid #ccc;
 }
 
 .bibtex-edit-bib-form 

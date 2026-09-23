@@ -85,7 +85,9 @@ SDV($HTMLHeaderFmt['mathjax-config'],                           //Add MathJax co
 SDV($HTMLHeaderFmt['mathjax'], "<script src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>");
 SDV($HTMLHeaderFmt['d3'], "<script src='https://d3js.org/d3.v7.min.js'></script>");
 SDV($HTMLHeaderFmt['bibinit'], "<script src='$PubDirUrl/bibtexref/bibtexref.js'></script>");
-SDV($HTMLHeaderFmt['editbib'], "<script type='text/javascript' src='" . htmlspecialchars($PubDirUrl) . "/pako/pako.min.js'></script>");
+SDV($HTMLHeaderFmt['editbib'], "<script src='$PubDirUrl/pako/pako.min.js'></script>");
+SDV($HTMLHeaderFmt['codemirror-bib'], "<script type='module' src='$PubDirUrl/bibtexref/codemirror-bibtex.js'></script>");
+
 
 //First list handlers for POST actions. Since this script gets exec'd both when a HTML page is constructed and also when clients sent answers (POST)
 //to the server, in the latter case, it's faster to just handle those actions and exit processing
@@ -832,9 +834,9 @@ function EditBibForm($v)                                        #What (:editbib:
                     <p><strong>Editing bibliography</strong></p><br>
                     <form id ='bibtext-form' method='post' class='bibtex-bib-form'>
                        <input type='hidden' name='filename' value='" . htmlspecialchars($filename). "'>         
-                        <textarea id='bibtext' name='bibtext' class='bibtex-editor'> </textarea>
+                        <div id='bibtext' class='bibtex-editor'></div>
                         <div style='width: 100%; display: flex; justify-content: flex-start;'>
-                            <input type='submit' value='Save' class 'bibtex-save-button'>
+                            <input type='submit' value='Save' class='bibtex-save-button'>
                             <input type='hidden' name='bibtext_compressed'>
                             <input type='hidden' name='goback' value = '$Bibtex_goback'>
                             <button type='reset' onclick=\"window.location.href='$Bibtex_goback';\">Cancel</button>
@@ -849,45 +851,43 @@ function EditBibForm($v)                                        #What (:editbib:
       "<script> 
        document.addEventListener('DOMContentLoaded', function() 
        { 
-         fetch('" . htmlspecialchars($file_url) . "' + '?t=' + new Date().getTime())    //The ?t= param is a unique value; forces browser cache invalidation
-           .then(response => response.text())                              // Parse the response as text
-           .then(text => {
-              textarea = document.getElementById('bibtext');
-              textarea.value = text;  // Set the file content into the textarea
-              const keyword = '" . ($key) . "'; 
-              if (keyword !== '')                                          //If we have $key set, this is the name of a Bibtex entry that we want 
-              {                                                            //to 'bring in focus' in the text area (so we can easily edit it next).
-                const index = text.indexOf(keyword);                       //To do this, we must compute the y scrolling-factor (in pixels).
-                if (index != -1)                                           //To do that in turn, we create a fake div element having exactly
-                {                                                          //the amount of text before the keyword; compute the height of this div;
-                   const beforeText = text.slice(0, index);                //and use that height as scrolling factor on the edit box. 
-                   const dummyDiv = document.createElement('div');
-                   dummyDiv.style.visibility = 'hidden';
-                   dummyDiv.style.position = 'absolute';
-                   dummyDiv.style.whiteSpace = 'pre-wrap';
-                   dummyDiv.style.wordWrap = 'break-word';
-                   dummyDiv.style.width = textarea.clientWidth + 'px';
-                   dummyDiv.style.font = window.getComputedStyle(textarea).font;
-                   dummyDiv.style.lineHeight = window.getComputedStyle(textarea).lineHeight;
-                   dummyDiv.textContent = beforeText;
+         fetch('" . htmlspecialchars($file_url) . "' + '?t=' + new Date().getTime())
+          .then(response => response.text())
+          .then(text => {
+            window.bibtexEditor = new CodeMirrorBib.EditorView({
+                state: CodeMirrorBib.EditorState.create({
+                    doc: text,
+                    extensions: [CodeMirrorBib.basicSetup,CodeMirrorBib.bibtex()]
+                }),
+                parent: document.getElementById('bibtext')
+            });
 
-                   document.body.appendChild(dummyDiv);
-                   const scroll = dummyDiv.offsetHeight;                   //Get height of the dummy object
-                   textarea.scrollTop = scroll;                            //Scroll text box by the height of the dummy object
-                   document.body.removeChild(dummyDiv);                    //Delete the dummy object
-                
-                   textarea.focus();                                       //Highlight the keyword in the text box
-                   textarea.setSelectionRange(index, index + keyword.length);
-                   textarea.scrollTop = scroll;                            //Needed since some browsers mess up scrolling when highlighting
+            const keyword = '" . ($key) . "';
+
+            if (keyword !== '')
+            {
+                const index = text.indexOf(keyword);
+
+                if (index !== -1)
+                {
+                    window.bibtexEditor.dispatch({
+                        selection: {
+                            anchor: index,
+                            head: index + keyword.length
+                        },
+                        scrollIntoView: true
+                    });
+
+                    window.bibtexEditor.focus();
                 }
-              }
-           });
+            }
+        });
        });
        document.querySelector('.bibtex-bib-form').addEventListener('submit', async function(e) 
        {                                                                   //Callback for the HTML form submission (when Save pressed)
           e.preventDefault();                                              //Prevent the default form submission since we want to do stuff below
 
-          let bibText = document.getElementById('bibtext').value;          //Get the textarea value
+          let bibText = window.bibtexEditor.state.doc.toString();
           let compressed = pako.gzip(bibText);                             //Compress it using Pako
           let binString = Array.from(compressed, byte => String.fromCharCode(byte)).join(''); // Convert Uint8Array to binary string before base64 encoding
           let base64Data = btoa(binString);
