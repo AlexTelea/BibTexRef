@@ -73,6 +73,7 @@
    Param 1:   
 
    BibTeX filename to display/edit. Parsed _reasonably_ well; uses MathJax to render math; some issues may happen with non-ASCII characters.
+   A smart editor (finding syntax errors etc) helps users finding Bibtex errors and correcting them.
 
    Special/useful fields atop of usual fields in Bibtex:
    pdf:   set this to the URL where the PDF of the paper is available, if any

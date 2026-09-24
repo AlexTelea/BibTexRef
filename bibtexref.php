@@ -809,10 +809,9 @@ function HandleEditBib($pagename, $auth)                        #When a page is 
 }
 
 
+
 function EditBibForm($v)                                        #What (:editbib:) should actually expand do
 {                                                               #v[] is an array of the type argv[] containing the arguments of (:editbib:)
-
-
 
     global $Bibtex_goback, $BibtexBibDir, $BibtexBibUrl, $PubDirUrl;
   
@@ -830,16 +829,19 @@ function EditBibForm($v)                                        #What (:editbib:
                                                                 #All needed styles are in pub/local.css
     
     $ret =  Keep("<div class='bibtex-edit-bib-form'>
-                <div class='bibtex-edit-bib-form'>
                     <p><strong>Editing bibliography</strong></p><br>
                     <form id ='bibtext-form' method='post' class='bibtex-bib-form'>
                        <input type='hidden' name='filename' value='" . htmlspecialchars($filename). "'>         
                         <div id='bibtext' class='bibtex-editor'></div>
-                        <div style='width: 100%; display: flex; justify-content: flex-start;'>
-                            <input type='submit' value='Save' class='bibtex-save-button'>
+                        <div style='width: 100%; display: flex; justify-content: flex-start; align-items: center;'>
+                            <input type='submit' value='Save'>
                             <input type='hidden' name='bibtext_compressed'>
                             <input type='hidden' name='goback' value = '$Bibtex_goback'>
                             <button type='reset' onclick=\"window.location.href='$Bibtex_goback';\">Cancel</button>
+                            <span id='bibtex-errors' style='margin-left: 10px;'></span>
+                            <button type='button' id='bibtex-prev-error' style='margin-left: 10px; display: none;' title='Previous BibTeX error'>&#9664;</button>
+                            <button type='button' id='bibtex-next-error' style='display: none;' title='Next BibTeX error'>&#9654;</button>
+                            <span id='bibtex-error-message' style='margin-left: 10px;'></span>     
                         </div>
                     </form>
                 </div>") . "\n";
@@ -850,11 +852,46 @@ function EditBibForm($v)                                        #What (:editbib:
     $ret .= Keep( 
       "<script> 
        document.addEventListener('DOMContentLoaded', function() 
-       { 
+       {
+         let mainErrors = [];                                                  //Gathers all Bibtex errors found by the smart editor
+         let currentError = 0;                                                 //Which of the above errors is displayed (if any errors)
+
+         function showBibtexError()                                            //Shows the current Bibtex error in a status bar (selected via arrow btns) if any
+         {
+           if (mainErrors.length == 0) return;
+           let e = mainErrors[currentError];
+           let line = window.bibtexEditor.state.doc.lineAt(e.from).number;
+           document.getElementById('bibtex-error-message').textContent = (currentError + 1) + '/' + mainErrors.length + ' (line ' + line + '): ' + e.message;
+           window.bibtexEditor.dispatch({
+              selection: {
+                anchor: e.from,
+                head: e.to
+              },
+              scrollIntoView: true
+              });
+           window.bibtexEditor.focus();
+         }
+
+         document.getElementById('bibtex-next-error').onclick = function()     //Show next Bibtex error
+         {
+           if (mainErrors.length == 0) return;
+           currentError++;
+           if (currentError >= mainErrors.length) currentError = 0;
+           showBibtexError();
+         };
+
+         document.getElementById('bibtex-prev-error').onclick = function()     //Show previous Bibtex error
+         {
+           if (mainErrors.length == 0) return;
+           currentError--;
+           if (currentError < 0) currentError = mainErrors.length - 1;
+           showBibtexError();
+         };
+ 
          fetch('" . htmlspecialchars($file_url) . "' + '?t=' + new Date().getTime())
           .then(response => response.text())
           .then(text => {
-            window.bibtexEditor = new CodeMirrorBib.EditorView({
+            window.bibtexEditor = new CodeMirrorBib.EditorView({               //Create smart Bibtex-code editor
                 state: CodeMirrorBib.EditorState.create({
                     doc: text,
                     extensions: [CodeMirrorBib.basicSetup,CodeMirrorBib.bibtex()]
@@ -862,7 +899,7 @@ function EditBibForm($v)                                        #What (:editbib:
                 parent: document.getElementById('bibtext')
             });
 
-            const keyword = '" . ($key) . "';
+            const keyword = '" . ($key) . "';                                  //Scroll editor to show Bibtex entry $key if any is set
 
             if (keyword !== '')
             {
@@ -877,49 +914,49 @@ function EditBibForm($v)                                        #What (:editbib:
                         },
                         scrollIntoView: true
                     });
-
                     window.bibtexEditor.focus();
                 }
             }
         });
-       });
-       document.querySelector('.bibtex-bib-form').addEventListener('submit', async function(e) 
-       {                                                                   //Callback for the HTML form submission (when Save pressed)
+       
+        document.querySelector('.bibtex-bib-form').addEventListener('submit', async function(e) 
+        {                                                                   //Callback for the HTML form submission (when Save pressed)
           e.preventDefault();                                              //Prevent the default form submission since we want to do stuff below
 
+          let rawErrors = [];
 
-          let hasErrors = false;
-          let firstError = null;
+          CodeMirrorBib.forEachDiagnostic(window.bibtexEditor.state, d =>  //Collect all errors that the smart editor can find
+          { if (d.severity == 'error') rawErrors.push(d); });
 
-          CodeMirrorBib.forEachDiagnostic(window.bibtexEditor.state, d =>
+          mainErrors = rawErrors.filter((d, i) =>                          //Filter collected errors based on range; keep largest-ranges (main err messages)
+          { return !rawErrors.some((other, j) => j != i && other.from <= d.from && other.to >= d.to); });
+
+                                                                           //Hide/show prev/next error buttons if we don't have errors
+          document.getElementById('bibtex-prev-error').style.display = mainErrors.length > 1 ? 'inline-block' : 'none';
+          document.getElementById('bibtex-next-error').style.display = mainErrors.length > 1 ? 'inline-block' : 'none';
+          document.getElementById('bibtex-error-message').style.display = mainErrors.length ? 'inline' : 'none';
+
+          let box = document.getElementById('bibtex-errors');              //Clear the current-error display, we'll set it next if there's any to show
+          box.textContent = '';
+
+          if (mainErrors.length!=0)                                        //Any errors found? Display the 1st one, init navigation to show them all next
           {
-             if (d.severity == 'error')
-             { hasErrors = true; if (firstError == null) firstError = d; }
-          });
-
-          if (hasErrors)
-          {
-             alert('BibTeX error: ' + firstError.message);
-
-             window.bibtexEditor.dispatch({
-             selection: {
-                anchor: firstError.from,
-                head: firstError.to
-                },
-             scrollIntoView: true
-             });
-
-             window.bibtexEditor.focus();
-             return;   // THIS ONLY stops the JS Save action
+             box.textContent = mainErrors.length + ' error(s)';
+             currentError = 0;
+             showBibtexError();
+             return;                                                       //Stop the JS Save action since we have errors
           }
 
-	  let bibText = window.bibtexEditor.state.doc.toString();
+	  let bibText = window.bibtexEditor.state.doc.toString();          //We only get here if we have no Bibtex errors, so we can save the edited stuff
           let compressed = pako.gzip(bibText);                             //Compress it using Pako
           let binString = Array.from(compressed, byte => String.fromCharCode(byte)).join(''); // Convert Uint8Array to binary string before base64 encoding
           let base64Data = btoa(binString);
           document.querySelector('input[name=\'bibtext_compressed\']').value = base64Data; //Store data to send in 'bibtex_compressed' HTML form field
           this.submit();                                                   // Finally submit the form to the server
-       });
+        });
+
+      });
+
       </script>") . "\n";
   
     return $ret;

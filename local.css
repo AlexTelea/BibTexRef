@@ -63,13 +63,6 @@
             gap : 10px;
 }
 
-.bibtex-save-button 
-{
-            align-self: flex-start;
-            margin: 0;
-            padding: 5px 15px;
-}
-
 #randthumbs-gallery {
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
