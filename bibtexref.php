@@ -887,7 +887,33 @@ function EditBibForm($v)                                        #What (:editbib:
        {                                                                   //Callback for the HTML form submission (when Save pressed)
           e.preventDefault();                                              //Prevent the default form submission since we want to do stuff below
 
-          let bibText = window.bibtexEditor.state.doc.toString();
+
+          let hasErrors = false;
+          let firstError = null;
+
+          CodeMirrorBib.forEachDiagnostic(window.bibtexEditor.state, d =>
+          {
+             if (d.severity == 'error')
+             { hasErrors = true; if (firstError == null) firstError = d; }
+          });
+
+          if (hasErrors)
+          {
+             alert('BibTeX error: ' + firstError.message);
+
+             window.bibtexEditor.dispatch({
+             selection: {
+                anchor: firstError.from,
+                head: firstError.to
+                },
+             scrollIntoView: true
+             });
+
+             window.bibtexEditor.focus();
+             return;   // THIS ONLY stops the JS Save action
+          }
+
+	  let bibText = window.bibtexEditor.state.doc.toString();
           let compressed = pako.gzip(bibText);                             //Compress it using Pako
           let binString = Array.from(compressed, byte => String.fromCharCode(byte)).join(''); // Convert Uint8Array to binary string before base64 encoding
           let base64Data = btoa(binString);
