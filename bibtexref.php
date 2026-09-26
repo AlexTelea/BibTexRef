@@ -271,10 +271,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')                                   //T
             unlink($file);
          //!!possibly add code to delete all _raw_image temp files
 
-
          $processed_log = $qual_thumbs_dir . "/processed.log";
          unlink($processed_log);
-
 
          PDFToThumbnails::computeThumbnails($pdf, $key, $BibtexBibDir, 10); 
          touch($processed_log);
@@ -1035,7 +1033,7 @@ function BibQuery_callback($v)                                  //Generates mark
         $ret .= "</div>\n";
       }
   }
-                                                             //2. Render the selected entries (either from cache or else computed next)
+                                                              //2. Render the selected entries (either from cache or else computed next)
   if ($keywords == "" && $author == "")                       //Specific queries on authors/keywords: We don't have a cache for that..
      if (file_exists($cacheFile))                             //Is there a valid cache? Then return its contents, we are done
        return $ret . file_get_contents($cacheFile);
@@ -2127,39 +2125,41 @@ function makeThumb($value)
         global $BibtexBibUrlShort, $RootPrefix, $BibtexBibUrl, $BibtexBibDir, $BibtexThumbLink;
 
         $img_files = [];                                                //Collects names of all thumbnails for this entry
-
         $thumbs_dir = $BibtexBibDir . "/" . $value->entryname . "_thumbs";
-        
-        if (!is_dir($thumbs_dir))                                       //1. Make in any case the _thumbs dir if not existing
-          mkdir($thumbs_dir,0775);
+        $processed_log = $thumbs_dir . "/processed.log";       
 
-        $processed_log = $thumbs_dir . "/processed.log";
+        $size = @filesize($processed_log);                          
 
-        if (!file_exists($processed_log))                               //2. See if we already ran the PDF extractor. If not, run it now
+        if ($size === false)                                            //Did we _ever_ process this PDF file? If not, do it now 
         {
+          if (!is_dir($thumbs_dir))  mkdir($thumbs_dir, 0775);          //Create dir for thumbnails if doesn't exist
           $pdf_file = $value->getPDF();                                 //Get PDF (either local or via PDF field in Bib record) 
-          
           if ($pdf_file)                                                //If we got any PDF, extract max 10 thumbnails from it into the thumbs dir
-          {                                                              //This is slow if not already done
-            PDFToThumbnails::computeThumbnails($pdf_file, $value->entryname, $BibtexBibDir, 10);
-          } 
+                                                                        //This is slow if not already done
+            PDFToThumbnails::computeThumbnails($pdf_file, $value->entryname, $BibtexBibDir, 10); 
 
           touch($processed_log);                                        //Mark this thumbs dir as already processed (from its PDF)
+          $size = 0;                                                      
         }
 
-        $all_jpgs = glob($thumbs_dir . "/" . '*.jpg') ?: [];             //3. Get all JPG images in _thumbs dir. These can be extracted thumbs,
-                                                                         //   user-supplied custom thumbs, or _raw_image*jpg temp files from the extractor
-                                                                         //   Keep only the valid ones for display
-        $img_files = preg_grep('#/_raw[^/]*\.jpg$#', $all_jpgs, PREG_GREP_INVERT);
+        if ($size === 0)                                                //Did we cache the results of an earlier PDF processing? If not, do it
+        {
+            $all_jpgs = glob($thumbs_dir . '/' . '*.jpg') ?: [];        //   Get all JPG images in _thumbs dir. These can be extracted thumbs,
+                                                                        //   user-supplied custom thumbs, or _raw_image*jpg temp files from the extractor
+                                                                        //   Keep only the valid ones for display
+            $img_files = preg_grep('#/_raw[^/]*\.jpg$#', $all_jpgs, PREG_GREP_INVERT);
+
+            $img_files = array_map(function($f) { return basename(dirname($f)) . '/' . basename($f); }, $img_files);
+
+            file_put_contents($processed_log, implode('\n', $img_files) . '\n');
+                                                                        //   Write obtained thumbnail-files to processed_log
+        }
         
-        $img_files = array_map(function($f) {
-           return basename(dirname($f)) . '/' . basename($f);
-        }, $img_files);
+        $img_files = file($processed_log, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-        if (count($img_files)==0)                                       //4. If could not get any thumb images, use a default image
-           $img_files[] = $BibtexThumbLink;
+        if (!$img_files) $img_files = array($BibtexThumbLink);          //Get all images for this paper; if we have none, use default thumbnail
 
-        $result_link = "";                                              //Try now to make the best possible link for the thumbnail: local PDF from name-> PDF from BibTex -> URL to DOI
+        $result_link = "";                                              //Make the best possible link for the thumbnail: local PDF from name-> PDF from BibTex -> URL to DOI
 
         if ($result_link=="")                                           //1. See if we have a locally cached PDF for this entry - if so, use it
         {
@@ -2175,19 +2175,13 @@ function makeThumb($value)
         if ($result_link=="")                                           //2. If there's no local PDF file, see if we have a "PDF" entry in the Bib record
         {
             $pdf = $value->get("PDF");
-            if ($pdf)                                                   //If there's a provided PDF field in Bib, link thumbnail to it
-            {
-                $result_link = $pdf;
-            }
+            if ($pdf) $result_link = $pdf;                              //If there's a provided PDF field in Bib, link thumbnail to it
         }
 
         if ($result_link=="")                                           //3. If no PDF found so far, see if we have a URL in the Bib field. If so, link thumbnail to it
         {
             $url = $value->get("URL");
-            if ($url)                                                   //Check the URL is valid syntactically
-            {
-                $result_link = $url;
-            }
+            if ($url) $result_link = $url;                              //Check the URL is valid syntactically
         }
 
         if ($result_link=="")                                           //4. If no URL or PDF, see if we have a DOI; if so, link thumbnail to it
@@ -2201,10 +2195,10 @@ function makeThumb($value)
             }
         }
 
-        $imageUrl = $BibtexBibUrlShort . "/". $img_files[0];                 //Generate actual HTML code to display the image since we're using
+        $imageUrl = $BibtexBibUrlShort . "/". $img_files[0];            //Generate actual HTML code to display the image since we're using
                                                                         //next a special CSS style to cut/resize the image to create thumbnails
 
-        $thumb_container_name = "thumbC-" . $value->entryname;   //We'll create a div container to store a 'data-images' attribute with names of all thumbnails
+        $thumb_container_name = "thumbC-" . $value->entryname;          //We'll create a div container to store a 'data-images' attribute with names of all thumbnails
 
       
         $thumb_images = implode(',', array_map(function($img) use ($BibtexBibUrlShort) { return $BibtexBibUrlShort . "/" . $img; }, $img_files));
@@ -2213,7 +2207,6 @@ function makeThumb($value)
 
         $thumb_code = "<div id='$thumb_container_name' class='bib-thumb-c' data-images='$thumb_images'> <img id ='$thumb_name' class='bibtex-img-thumb-cont' src='$imageUrl' loading='lazy'/></div>"; 
                                                                         //Create the container and the thumbnail inside it
-
         $thumbnail = "";
 
         if ($result_link)                                               //Did we get some valid link for the thumbnail at all? Then use it; else, just show the thumbnail
@@ -2441,7 +2434,7 @@ function AddBibEntries($grp_res, $standard)                                     
           $ret .= "<h1 id='{$id}'>{$key}</h1>\n"; 
         }
 
-        $ret .= "(:table cellspacing=0 bgcolor=#efefef :) " . "\n";   		                //Then add all group entries in a table
+        $ret .= "(:table cellspacing=0 bgcolor=#efefef :) " . "\n";   		                //Add all group entries in a table
         foreach($entries as $value)
         {
           if ($lod=='Full')						                        //First cell: thumbnails (if LOD is 'Full')
