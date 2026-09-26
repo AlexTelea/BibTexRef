@@ -1035,20 +1035,17 @@ function BibQuery_callback($v)                                  //Generates mark
         $ret .= "</div>\n";
       }
   }
-  
-
                                                              //2. Render the selected entries (either from cache or else computed next)
   if ($keywords == "" && $author == "")                       //Specific queries on authors/keywords: We don't have a cache for that..
      if (file_exists($cacheFile))                             //Is there a valid cache? Then return its contents, we are done
        return $ret . file_get_contents($cacheFile);
 
-
   $output = AddBibEntries($grp_res, $standard);               //Render selected bib entries into markup 
- 
+
   if ($keywords == "" && $author == "")                       //Don't cache if we had specific author/keyword queries; we only cache general things
      file_put_contents($cacheFile, $output);                  //Cache that query result (mix of markup and HTML) for further use
 
-   return $ret . $output;                                     //Return whatever we got (cached or computed)
+  return $ret . $output;                                     //Return whatever we got (cached or computed)
 }
 
 
@@ -1469,12 +1466,22 @@ class BibtexEntry                                                           //Su
         {
            if ($this->isLocalUrl($pdf))                                               //Is the PDF URL local to this server? Then check its target file does exist. 
            {                                                                          //If not, don't show the PDF icon since we have clearly nothing to serve for it.
-              $ctx = stream_context_create(['http' => ['method' => 'HEAD', 'timeout' => 2]]);
-              $headers = @get_headers($pdf, 1, $ctx);
-              if ($headers && isset($headers[0]) && strpos($headers[0], '200') !== false)
+              /* //!! Slow version of checking if a local URL exists; I replaced it by code below but not 100% sure that's doing the same
+               $ctx = stream_context_create(['http' => ['method' => 'HEAD', 'timeout' => 2]]);
+               $headers = @get_headers($pdf, 1, $ctx);
+               if ($headers && isset($headers[0]) && strpos($headers[0], '200') !== false)
+               {
+                 $pdf_safe = str_replace(":", "&#58;", $pdf);                          //PDF field is absolute URL: Hack: This code is needed since, in getSolePageEntry(), MarkupToHTML()
+                 $ret .= xKeep("<a href='$pdf_safe'> $pdfThumb</a>");                  //will else screw up absolute "https://..etc" text (by its regex), aiming to 'fix' it as it thinks 
+               }
+              */
+              
+              $path = parse_url($pdf, PHP_URL_PATH);
+
+              if (file_exists($_SERVER['DOCUMENT_ROOT'] . $path))
               {
-                $pdf_safe = str_replace(":", "&#58;", $pdf);                          //PDF field is absolute URL: Hack: This code is needed since, in getSolePageEntry(), MarkupToHTML()
-                $ret .= xKeep("<a href='$pdf_safe'> $pdfThumb</a>");                  //will else screw up absolute "https://..etc" text (by its regex), aiming to 'fix' it as it thinks 
+                $pdf_safe = str_replace(":", "&#58;", $pdf);
+                $ret .= xKeep("<a href='$pdf_safe'> $pdfThumb</a>");
               }
            }
            else                                                                       //Is the PDF URL outside of this server? Don't check since we cannot infer anything from such a check 
@@ -1629,7 +1636,7 @@ class BibtexEntry                                                           //Su
     function getRichSummary($show_bibtex_icon, $lod)  						//Create a 'rich' summary for this Bib record. This includes title, authors, year,
     {												                        //publisher etc (all fields from the record); depending on $lod, also add buttons
        $ret = $this->getSummary();								            //to access various such fields via URLs
-                 
+       
        $award = $this->get('AWARD');                                        //Add any mention of an award (in red), if one is given in Bibtex
        if ($award)
           $ret .= " (%red%" . $award . "%%)";
@@ -1637,9 +1644,10 @@ class BibtexEntry                                                           //Su
        $note =  $this->get("NOTE");
        if ($note)
           $ret .= " (" . $note . ")";
- 
+
        if ($lod != 'Minimal')									            //$show_bibtex_icon separately controls if the BibTex button is to be shown or not
           $ret .= $this->getPostString($show_bibtex_icon); 
+
        return $ret;
     }
 }
@@ -2127,7 +2135,6 @@ function makeThumb($value)
 
         $processed_log = $thumbs_dir . "/processed.log";
 
-
         if (!file_exists($processed_log))                               //2. See if we already ran the PDF extractor. If not, run it now
         {
           $pdf_file = $value->getPDF();                                 //Get PDF (either local or via PDF field in Bib record) 
@@ -2137,7 +2144,7 @@ function makeThumb($value)
             PDFToThumbnails::computeThumbnails($pdf_file, $value->entryname, $BibtexBibDir, 10);
           } 
 
-          touch($processed_log);                                        //Mark thios thumbs dir as already processed (from its PDF)
+          touch($processed_log);                                        //Mark this thumbs dir as already processed (from its PDF)
         }
 
         $all_jpgs = glob($thumbs_dir . "/" . '*.jpg') ?: [];             //3. Get all JPG images in _thumbs dir. These can be extracted thumbs,
