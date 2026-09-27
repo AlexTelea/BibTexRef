@@ -1453,46 +1453,46 @@ class BibtexEntry                                                           //Su
       $pdfThumb = "<span><img src='$imageUrl' class='bibtex-small-thumb-cont'/></span>";
 
                 
-      $pdf_file = $BibtexBibDir . "/" . $this->entryname . ".pdf";                    //The name of this PDF is the Bibtex-entry-name . pdf
-      
-
-      if (file_exists($pdf_file)!=false)
+      $pdf_file = $BibtexBibDir . "/" . $this->entryname . ".pdf";                    //1: PDF file was (manually) saved in uploads under the entry's name
+      if (file_exists($pdf_file)!=false)                                              //Check that this file exists
       {
-         $pdf_url = $BibtexBibUrlShort . "/". $this->entryname . ".pdf";     //1. File exists: map its name to an URL and add link "PDF" in markup
+         $pdf_url = $BibtexBibUrlShort . "/". $this->entryname . ".pdf";             
          $ret .= xKeep("<a href='" . $pdf_url . "'> $pdfThumb</a>");
       }
-      else
+      else                                                                            //2. No default PDF; try see if a PDF Bibtex field exists/is local/readable
       {
         $pdf = $this->get("PDF");
         if ($pdf) 
         {
+           $file_exists = false;
+
            if ($this->isLocalUrl($pdf))                                               //Is the PDF URL local to this server? Then check its target file does exist. 
            {                                                                          //If not, don't show the PDF icon since we have clearly nothing to serve for it.
-               /*!!$ctx = stream_context_create(['http' => ['method' => 'HEAD', 'timeout' => 2]]);
-               $headers = @get_headers($pdf, 1, $ctx);
-               if ($headers && isset($headers[0]) && strpos($headers[0], '200') !== false)
-               {
-                 $pdf_safe = str_replace(":", "&#58;", $pdf);                          //PDF field is absolute URL: Hack: This code is needed since, in getSolePageEntry(), MarkupToHTML()
-                 $ret .= xKeep("<a href='$pdf_safe'> $pdfThumb</a>");                  //will else screw up absolute "https://..etc" text (by its regex), aiming to 'fix' it as it thinks 
-               }*/
-
               $path = parse_url($pdf, PHP_URL_PATH);                                   //Map local URL to local filename
               $pos = strpos($path, '/uploads/');				       //This way, we can check very quickly if the local URL indeed points to a file
               if ($pos !== false)
               {
                    $relative = substr($path, $pos + strlen('/uploads/'));
                    $fullpath = $UploadDir . '/' . $relative;
-                   if (file_exists($fullpath))
-                   {
-                     $pdf_safe = str_replace(":", "&#58;", $pdf);
-                     $ret .= xKeep("<a href='$pdf_safe'> $pdfThumb</a>");
-                   }
+                   if (file_exists($fullpath)) $file_exists = true;
               }
+ 
+              /*
+               if (!$file_exists)                                                      //Far more expensive check: not needed if my code above that maps local URLs to
+               {								       //server-filenames is correct.. 
+                 $ctx = stream_context_create(['http' => ['method' => 'HEAD', 'timeout' => 2]]);
+                 $headers = @get_headers($pdf, 1, $ctx);
+                 if ($headers && isset($headers[0]) && strpos($headers[0], '200') !== false)
+                   $file_exists = true;
+               }
+              */
            }
-           else                                                                       //Is the PDF URL outside of this server? Don't check since we cannot infer anything from such a check 
-           {
-               $pdf_safe = str_replace(":", "&#58;", $pdf);                           //Same hack fix as above
-               $ret .= xKeep("<a href='" . $pdf_safe . "'> $pdfThumb</a>");
+           else $file_exists = true;                                                   //Is the PDF URL outside of this server? Don't check since we cannot infer anything from such a check 
+        
+           if ($file_exists)
+           {  
+                 $pdf_safe = str_replace(":", "&#58;", $pdf);                          //PDF field is absolute URL: Hack: This code is needed since, in getSolePageEntry(), MarkupToHTML()
+                 $ret .= xKeep("<a href='$pdf_safe'> $pdfThumb</a>");                  //will else screw up absolute "https://..etc" text (by its regex), aiming to 'fix' it as it thinks
            }
         }
       }
