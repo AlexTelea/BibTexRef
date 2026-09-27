@@ -973,7 +973,6 @@ $BibtexGscholarLink = "gscholar_logo.png";
 $BibtexCodeLink = "code_logo.png";
 $BibtexAwardLink = "award_logo.png";
  
-
 function BibQuery_callback($v)                                  //Generates markup for (:bibtexquery:) 
 {
   global $BibtexBibDir;
@@ -2136,7 +2135,6 @@ function makeThumb($value)
         $processed_log = $thumbs_dir . "/processed.log";       
 
         $img_files = @file($processed_log, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                                                                        //Try read the manifest file containing the thumbs for this entru
 
         if ($img_files === false)                                       //We seem not to have processed this PDF ever, so do it now
         {
