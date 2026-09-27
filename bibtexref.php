@@ -275,7 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')                                   //T
          unlink($processed_log);
 
          PDFToThumbnails::computeThumbnails($pdf, $key, $BibtexBibDir, 10); 
-         touch($processed_log);
+         touch($processed_log);                                                        //Marks extractor as run, see makeThumb()
      }
 
 
@@ -990,6 +990,8 @@ function BibQuery_callback($v)                                  //Generates mark
   $standard = (isset($v[6]) && trim($v[6]) === 'standard');
 
   $ret = "";
+
+  
 
   list($group,$grp_res) = SelectEntries($v[1], $v[2], $v[3], $v[4], $v[5], $standard);            //Select entries to show from the bib file based on selection params
   
@@ -2133,21 +2135,21 @@ function makeThumb($value)
         $thumbs_dir = $BibtexBibDir . "/" . $value->entryname . "_thumbs";
         $processed_log = $thumbs_dir . "/processed.log";       
 
-        $size = @filesize($processed_log);                          
+        $img_files = @file($processed_log, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                                                                        //Try read the manifest file containing the thumbs for this entru
 
-        if ($size === false)                                            //Did we _ever_ process this PDF file? If not, do it now 
+        if ($img_files === false)                                       //We seem not to have processed this PDF ever, so do it now
         {
-          if (!is_dir($thumbs_dir))  mkdir($thumbs_dir, 0775);          //Create dir for thumbnails if doesn't exist
+          @mkdir($thumbs_dir, 0775);                                    //Create dir for thumbnails (should not exist if we're here but if it does, mkdir fails gracefully)
           $pdf_file = $value->getPDF();                                 //Get PDF (either local or via PDF field in Bib record) 
           if ($pdf_file)                                                //If we got any PDF, extract max 10 thumbnails from it into the thumbs dir
                                                                         //This is slow if not already done
             PDFToThumbnails::computeThumbnails($pdf_file, $value->entryname, $BibtexBibDir, 10); 
 
-          touch($processed_log);                                        //Mark this thumbs dir as already processed (from its PDF)
-          $size = 0;                                                      
+          $img_files = [];                                              //Got potentially different thumbs so force manifest generation below
         }
 
-        if ($size === 0)                                                //Did we cache the results of an earlier PDF processing? If not, do it
+        if (count($img_files) == 0)                                     //Did we cache the results of an earlier PDF processing? If not, do it
         {
             $all_jpgs = glob($thumbs_dir . '/' . '*.jpg') ?: [];        //   Get all JPG images in _thumbs dir. These can be extracted thumbs,
                                                                         //   user-supplied custom thumbs, or _raw_image*jpg temp files from the extractor
@@ -2156,13 +2158,14 @@ function makeThumb($value)
 
             $img_files = array_map(function($f) { return basename(dirname($f)) . '/' . basename($f); }, $img_files);
 
-            file_put_contents($processed_log, implode("\n", $img_files) . "\n");
-                                                                        //   Write obtained thumbnail-files to processed_log
+            if (count($img_files))
+               file_put_contents($processed_log, implode("\n", $img_files) . "\n");
+            else file_put_contents($processed_log, "#NO_THUMBNAILS\n"); //   The manifest contains either all extracted thumbs or a marker that there were none
+                                                                        //   Write obtained thumbnail-files to processed_lo manifest file
         }
-        
-        $img_files = file($processed_log, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-        if (!$img_files) $img_files = array($BibtexThumbLink);          //Get all images for this paper; if we have none, use default thumbnail
+        if ((isset($img_files[0]) && $img_files[0] == "#NO_THUMBNAILS") || (count($img_files) == 0)) 
+           $img_files = array($BibtexThumbLink);                        //  If there are really no thumbnails, use default one
 
         $result_link = "";                                              //Make the best possible link for the thumbnail: local PDF from name-> PDF from BibTex -> URL to DOI
 
@@ -2431,6 +2434,8 @@ function AddBibEntries($grp_res, $standard)                                     
        $lod = $_COOKIE['level_of_detail'];
     else $lod = 'Full';
 
+    $t1 = 0;
+
     foreach ($grp_res as $key => $entries)                                                      //Add Bib entries for all groups
     {
         if ($key!="") 
@@ -2444,7 +2449,9 @@ function AddBibEntries($grp_res, $standard)                                     
         {
           if ($lod=='Full')						                        //First cell: thumbnails (if LOD is 'Full')
           {
+             $t = microtime(true);
              $thumbnail = makeThumb($value);                                             //Build all the complex code for managing the thumbnail
+             $t1 += microtime(true)-$t;
              $ret .= "(:cellnr width=20%:) %center% %width=20pct% $thumbnail \n";
              $ret .=  "(:cell:) "; 
           }
@@ -2453,11 +2460,12 @@ function AddBibEntries($grp_res, $standard)                                     
           if ($add_numbers) $ret .= "'''". ($tot_entries - $num_entries). "'''. ";         //If we want to number entries: do that
 
           $num_entries++;
-
           $ret .= $value->getRichSummary(true,$lod) . "\n";                              //second cell: summary (authors, year, title, various other logos)
         }
         $ret .= "(:tableend:)\n";
     }
+
+    var_dump("Time makeThumb: ",$t1); 
     
     return $ret;
 }
