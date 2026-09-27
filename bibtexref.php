@@ -2151,7 +2151,7 @@ function makeThumb($value)
 
             $img_files = array_map(function($f) { return basename(dirname($f)) . '/' . basename($f); }, $img_files);
 
-            file_put_contents($processed_log, implode('\n', $img_files) . '\n');
+            file_put_contents($processed_log, implode("\n", $img_files) . "\n");
                                                                         //   Write obtained thumbnail-files to processed_log
         }
         
