@@ -2434,8 +2434,6 @@ function AddBibEntries($grp_res, $standard)                                     
        $lod = $_COOKIE['level_of_detail'];
     else $lod = 'Full';
 
-    $t1 = 0;
-
     foreach ($grp_res as $key => $entries)                                                      //Add Bib entries for all groups
     {
         if ($key!="") 
@@ -2449,9 +2447,7 @@ function AddBibEntries($grp_res, $standard)                                     
         {
           if ($lod=='Full')						                        //First cell: thumbnails (if LOD is 'Full')
           {
-             $t = microtime(true);
              $thumbnail = makeThumb($value);                                             //Build all the complex code for managing the thumbnail
-             $t1 += microtime(true)-$t;
              $ret .= "(:cellnr width=20%:) %center% %width=20pct% $thumbnail \n";
              $ret .=  "(:cell:) "; 
           }
@@ -2465,8 +2461,6 @@ function AddBibEntries($grp_res, $standard)                                     
         $ret .= "(:tableend:)\n";
     }
 
-    var_dump("Time makeThumb: ",$t1); 
-    
     return $ret;
 }
         
