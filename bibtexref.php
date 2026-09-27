@@ -1441,7 +1441,7 @@ class BibtexEntry                                                           //Su
   function getPostString($dourl = true)                               //Called after getPreString. Generates markup to add the URL, PDF, DOI, and BibTeX fields.
   {                                                                   //As for getPreString, these are generic entries which don't depend on the Bib entry's type
 
-      global $BibtexBibUrlShort, $RootPrefix, $BibtexUrlLink, $BibtexBibLink, $pagename, $BibtexBibDir, $BibtexPdfLink, $BibtexDoiLink, $BibtexGscholarLink, $BibtexCodeLink, $BibtexAwardLink;
+      global $UploadDir, $BibtexBibUrlShort, $RootPrefix, $BibtexUrlLink, $BibtexBibLink, $pagename, $BibtexBibDir, $BibtexPdfLink, $BibtexDoiLink, $BibtexGscholarLink, $BibtexCodeLink, $BibtexAwardLink;
             
       $ret = "";
 
@@ -1452,6 +1452,8 @@ class BibtexEntry                                                           //Su
 
                 
       $pdf_file = $BibtexBibDir . "/" . $this->entryname . ".pdf";                    //The name of this PDF is the Bibtex-entry-name . pdf
+      
+
       if (file_exists($pdf_file)!=false)
       {
          $pdf_url = $BibtexBibUrlShort . "/". $this->entryname . ".pdf";     //1. File exists: map its name to an URL and add link "PDF" in markup
@@ -1464,22 +1466,25 @@ class BibtexEntry                                                           //Su
         {
            if ($this->isLocalUrl($pdf))                                               //Is the PDF URL local to this server? Then check its target file does exist. 
            {                                                                          //If not, don't show the PDF icon since we have clearly nothing to serve for it.
-              /* //!! Slow version of checking if a local URL exists; I replaced it by code below but not 100% sure that's doing the same
-               $ctx = stream_context_create(['http' => ['method' => 'HEAD', 'timeout' => 2]]);
+               /*!!$ctx = stream_context_create(['http' => ['method' => 'HEAD', 'timeout' => 2]]);
                $headers = @get_headers($pdf, 1, $ctx);
                if ($headers && isset($headers[0]) && strpos($headers[0], '200') !== false)
                {
                  $pdf_safe = str_replace(":", "&#58;", $pdf);                          //PDF field is absolute URL: Hack: This code is needed since, in getSolePageEntry(), MarkupToHTML()
                  $ret .= xKeep("<a href='$pdf_safe'> $pdfThumb</a>");                  //will else screw up absolute "https://..etc" text (by its regex), aiming to 'fix' it as it thinks 
-               }
-              */
-              
-              $path = parse_url($pdf, PHP_URL_PATH);
+               }*/
 
-              if (file_exists($_SERVER['DOCUMENT_ROOT'] . $path))
+              $path = parse_url($pdf, PHP_URL_PATH);                                   //Map local URL to local filename
+              $pos = strpos($path, '/uploads/');				       //This way, we can check very quickly if the local URL indeed points to a file
+              if ($pos !== false)
               {
-                $pdf_safe = str_replace(":", "&#58;", $pdf);
-                $ret .= xKeep("<a href='$pdf_safe'> $pdfThumb</a>");
+                   $relative = substr($path, $pos + strlen('/uploads/'));
+                   $fullpath = $UploadDir . '/' . $relative;
+                   if (file_exists($fullpath))
+                   {
+                     $pdf_safe = str_replace(":", "&#58;", $pdf);
+                     $ret .= xKeep("<a href='$pdf_safe'> $pdfThumb</a>");
+                   }
               }
            }
            else                                                                       //Is the PDF URL outside of this server? Don't check since we cannot infer anything from such a check 
